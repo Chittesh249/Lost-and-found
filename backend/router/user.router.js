@@ -7,12 +7,12 @@ const userRouter = express.Router()
 
 userRouter.get('/login',(req,res) => {
     const AccessTocken = jwt.sign(
-        {"username" : "Admin"},
+        {"username" : "User"},
         process.env.ACCESS_TOKEN_SECRET,
         {expiresIn : '600s'}
     )
     const RefreshToken = jwt.sign(
-        {"username" : "Admin"},
+        {"username" : "User"},
         process.env.REFRESH_TOKEN_SECRET,
         {expiresIn : '1d'}
     )
