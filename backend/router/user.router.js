@@ -1,5 +1,5 @@
 import express from "express"
-import sql from "../db/db"
+import sql from "../db/lostItemsdb"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
 
