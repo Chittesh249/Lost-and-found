@@ -76,21 +76,6 @@ class WelcomeScreen extends StatelessWidget {
                       color: Color(0xFF1A237E), fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A237E),
-                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onPressed: () {
-                  // ADMIN
-                },
-                child: const Text(
-                  "ADMIN",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
               const SizedBox(height: 40),
               Image.asset(
                 'assets/goldie.png',
