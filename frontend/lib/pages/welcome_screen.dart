@@ -1,4 +1,5 @@
 import 'package:amrita_retriever/pages/login.dart';
+import 'package:amrita_retriever/pages/signup.dart';
 import 'package:flutter/material.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -51,7 +52,26 @@ class WelcomeScreen extends StatelessWidget {
                   );
                 },
                 child: const Text(
-                  "Student / Staff",
+                  "Student / Staff Login",
+                  style: TextStyle(
+                      color: Color(0xFF1A237E), fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 15),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignupPage()),
+                  );
+                },
+                child: const Text(
+                  "Student / Staff SignUp",
                   style: TextStyle(
                       color: Color(0xFF1A237E), fontWeight: FontWeight.bold),
                 ),
