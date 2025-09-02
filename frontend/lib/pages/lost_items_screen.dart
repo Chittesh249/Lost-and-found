@@ -177,7 +177,6 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                 ),
                 const Divider(),
 
-                // 📝 Items List
                 Expanded(
                   child: displayedItems.isEmpty
                       ? const Center(child: Text("No items found."))
