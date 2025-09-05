@@ -6,9 +6,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import Sidebar from "./sidebar"
 import { Menu, Bell } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useRouter } from "next/navigation"
 
 export default function Topbar() {
+  const router = useRouter();
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 md:px-6">
@@ -37,9 +38,11 @@ export default function Topbar() {
             <Bell className="size-4" aria-hidden />
           </Button>
           <ThemeToggle />
-          <Avatar>
-            <AvatarFallback className="bg-blue-600 text-white">AD</AvatarFallback>
-          </Avatar>
+          <Button variant="default" size="default" aria-label="Notifications" onClick={() => {
+            router.push("/Login");
+          }}>
+            Logout
+          </Button>
         </div>
       </div>
     </header>
