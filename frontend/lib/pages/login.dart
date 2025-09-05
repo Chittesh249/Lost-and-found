@@ -23,7 +23,9 @@ class _LoginPageState extends State<LoginPage> {
       _error = null;
     });
 
-    final url = _isAdmin ? Uri.parse('http://localhost:3000/api/admin/login') : Uri.parse('http://localhost:3000/api/user/login');
+    final url = _isAdmin
+        ? Uri.parse('http://localhost:3000/api/admin/login')
+        : Uri.parse('http://localhost:3000/api/user/login');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -40,57 +42,128 @@ class _LoginPageState extends State<LoginPage> {
 
     if (response.statusCode == 200) {
       if (!mounted) return;
-      Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => const LostItemsScreen()),);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LostItemsScreen()),
+      );
     } else {
       setState(() {
-        _error = jsonDecode(response.body)['error'];  
+        _error = jsonDecode(response.body)['error'];
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFFD5316B);
+
     return Scaffold(
-      appBar: AppBar(title: Text('Login')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Login',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // 🔹 Your Logo Placeholder
+            Image.asset(
+              'assets/logo.png', // <-- replace with your logo path
+              height: 120,
+            ),
+            const SizedBox(height: 32),
+
+            // 🔹 Email Field
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: const TextStyle(color: primaryColor),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
+            const SizedBox(height: 16),
+
+            // 🔹 Password Field
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(
+                labelText: 'Password',
+                labelStyle: const TextStyle(color: primaryColor),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               obscureText: true,
             ),
+            const SizedBox(height: 12),
+
+            // 🔹 Admin Checkbox
             Row(
               children: [
                 Checkbox(
                   value: _isAdmin,
+                  activeColor: primaryColor,
                   onChanged: (val) {
                     setState(() {
                       _isAdmin = val ?? false;
                     });
                   },
                 ),
-                Text('Login as Admin'),
+                const Text('Login as Admin'),
               ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 20),
+
+            // 🔹 Login Button
             _loading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _login,
-                    child: Text('Login'),
+                ? const CircularProgressIndicator(color: primaryColor)
+                : SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _login,
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
+
+            // 🔹 Error Message
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Text(
                   _error!,
-                  style: TextStyle(color: Colors.red),
+                  style: const TextStyle(color: Colors.red),
                 ),
               ),
           ],

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:amrita_retriever/pages/item_details_page.dart';
 import 'package:http/http.dart' as http;
 
 class LostItemsScreen extends StatefulWidget {
@@ -268,6 +269,14 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                                     color: Colors.black54,
                                   ),
                                 ),
+                                onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ItemDetailsPage(item: item),
+                                  ),
+                                );
+                              },
                               ),
                             );
                           },

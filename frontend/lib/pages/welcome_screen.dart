@@ -30,14 +30,7 @@ class WelcomeScreen extends StatelessWidget {
                 fit: BoxFit.contain,
               ),
 
-              const SizedBox(height: 30),
-              const Text(
-                "Login as",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
+            
               const SizedBox(height: 15),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
