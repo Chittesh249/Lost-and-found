@@ -13,6 +13,9 @@ app.use(express.json());
 app.use("/api/user",userRouter);
 app.use("/api/admin",adminRouter);
 
+app.get("/",(req,res) => {
+  res.send("API is running....");
+})
 // server instance
 app.listen(process.env.PORT || 3000,() => {
     console.log("Listening on http://localhost:3000")
