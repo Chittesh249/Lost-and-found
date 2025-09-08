@@ -136,7 +136,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     );
                   },
                   child: const Text(
-                    "SignUp",
+                    "Sign Up",
                     style: TextStyle(
                         color: Color(0xFF1A237E),
                         fontWeight: FontWeight.bold),

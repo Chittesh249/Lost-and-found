@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 7, "column": 0}, "map": {"version":3,"sources":["file://D%3A/Lost-and-found/AdminFrontend/admin-frontend/app/Login/layout.tsx"],"sourcesContent":["// app/admin/login/layout.tsx\r\nimport type { Metadata } from \"next\";\r\n\r\nexport const metadata: Metadata = {\r\n  title: \"Admin Login\",\r\n  description: \"Login to access the admin dashboard\",\r\n};\r\n\r\nexport default function LoginLayout({\r\n  children,\r\n}: {\r\n  children: React.ReactNode;\r\n}) {\r\n  return (\r\n    <div className=\"bg-gradient-to-br from-purple-100 to-indigo-100 min-h-screen flex items-center justify-center\">\r\n      {children}\r\n    </div>\r\n  );\r\n}\r\n"],"names":[],"mappings":"AAAA,6BAA6B;;;;;;;AAGtB,MAAM,WAAqB;IAChC,OAAO;IACP,aAAa;AACf;AAEe,SAAS,YAAY,EAClC,QAAQ,EAGT;IACC,qBACE,8OAAC;QAAI,WAAU;kBACZ;;;;;;AAGP","debugId":null}}]
+}

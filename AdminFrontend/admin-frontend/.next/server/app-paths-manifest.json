@@ -1,0 +1,10 @@
+{
+  "/Login/page": "app/Login/page.js",
+  "/dashboard/AddItems/page": "app/dashboard/AddItems/page.js",
+  "/dashboard/lostitems/page": "app/dashboard/lostitems/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/users/page": "app/dashboard/users/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/signup/page": "app/signup/page.js"
+}
