@@ -12,9 +12,8 @@ export default function AdminSignup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const hashedPassword = await bcrypt.hash(password, 10);
     try {
-      const res = await axios.post("http://localhost:3000/api/admin/signup", { email, password });
+      const res = await axios.post("https://lost-and-found-es98.onrender.com/api/admin/signup", { email, password });
       if (res.status === 200) {
         alert("Signup successful! Please log in.");
         router.push("/Login"); // after signup, go to login
