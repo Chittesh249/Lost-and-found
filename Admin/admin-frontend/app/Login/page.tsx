@@ -13,18 +13,30 @@ export default function AdminLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      const response = await axios.post(
+        'https://lost-and-found-es98.onrender.com/api/admin/login',
+        { email, password }
+      );
 
-    const data = await axios.post('https://lost-and-found-es98.onrender.com/api/admin/login', { email, password });
-    if (data.status == 401){
-        alert("Login failed. Please check your credentials.");
-        /*router.push("/signup");*/
-    }
-    else if (data) {
-       router.push("/dashboard");
-    }
-    else {
-        alert("Login failed. Please check your credentials.");
-        router.push("/Login");
+      if (response.status === 200) {
+        router.push("/dashboard");
+        return;
+      }
+
+      alert("Login failed. Please check your credentials.");
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = (error.response?.data as { error?: string })?.error;
+        if (status === 401) {
+          alert(message || "Invalid email or password");
+        } else {
+          alert(message || "Unable to login right now. Please try again.");
+        }
+      } else {
+        alert("Unexpected error occurred. Please try again.");
+      }
     }
   };
 
