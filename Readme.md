@@ -97,23 +97,18 @@ Supabase bucket URL + metadata → stored in Supabase
 🖥 Backend Setup
 
 cd backend
-
 npm install
-
 npm start
 
 📱 Mobile App (Flutter)
 
 cd mobile
-
 flutter run
 
 🌐 Admin Dashboard
 
 cd admin
-
 npm install
-
 npm start
 
 👥 Team
