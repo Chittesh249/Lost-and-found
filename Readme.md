@@ -2,7 +2,7 @@
 
 A cross-platform Lost & Found system for students, staff, and administrators.
 
-<p align="center"> <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-blue?style=flat-square"/> <img src="https://img.shields.io/badge/Frontend-Flutter-orange?style=flat-square"/> <img src="https://img.shields.io/badge/Backend-Node.js-green?style=flat-square"/> <img src="https://img.shields.io/badge/Database-MongoDB-darkgreen?style=flat-square"/> <img src="https://img.shields.io/badge/Storage-AWS%20S3-yellow?style=flat-square"/> <img src="https://img.shields.io/badge/Auth-Microsoft%20OAuth-important?style=flat-square"/> </p>
+<p align="center"> <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-blue?style=flat-square"/> <img src="https://img.shields.io/badge/Frontend-Flutter-orange?style=flat-square"/> <img src="https://img.shields.io/badge/Backend-Node.js-green?style=flat-square"/> <img src="https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square"/> <img src="https://img.shields.io/badge/Auth-Supabase%20Auth-3ECF8E?style=flat-square"/> </p>
 📌 Overview
 
 Amrita Retriever is a campus-wide lost and found application designed to streamline the process of reporting, viewing, and claiming lost items at Amrita University.
