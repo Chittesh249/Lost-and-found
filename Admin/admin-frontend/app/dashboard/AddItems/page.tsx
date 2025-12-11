@@ -71,7 +71,7 @@ export default function DashboardPage() {
       console.log("Item added successfully:", data);
 
       setLostItem({
-        item_id:"",
+        item_id: "",
         item_name: "",
         description: "",
         date_lost: new Date(),
@@ -87,6 +87,63 @@ export default function DashboardPage() {
       console.error("Error uploading:", error);
     }
   };
+
+  const locations = [
+    "SECURITY GATE",
+    "DHANALAKSHMI BANK",
+    "MYTHREYI BHAVAN",
+    "AB1 CAR PARKING",
+    "AB1",
+    "MAIN CANTEEN",
+    "AMRITESHWARI HALL",
+    "SUDHAMANI HALL",
+    "AB1 SBI ATM",
+    "MAIN BASKETBALL COURT",
+    "MAIN VOLLEYBALL COURT",
+    "YAGNAVALKYA BHAVAN",
+    "YB MESS HALL",
+    "KASHYAPA MESS HALL",
+    "MAIN GROUND",
+    "AEROSPACE",
+    "KASHYAPA BHAVAN",
+    "KB GYM",
+    "BRIGU BHAVAN",
+    "AB4",
+    "PANDAL",
+    "MBA CANTEEN",
+    "ASB BLOCK",
+    "CIR BLOCK",
+    "KALARI BLOCK",
+    "AMENITIES BLOCK",
+    "SBI STORE ATM",
+    "ANOKHA HUB",
+    "BADMINTON COURT",
+    "VEHICLE POOL",
+    "MECHANICAL SHEDS",
+    "ASHRAM",
+    "GUEST HOUSE",
+    "BUTTERFLY GARDEN",
+    "GARGI BHAVAN",
+    "AB2",
+    "LIBRARY",
+    "FSN BLOCK",
+    "DEPT OF MATH BUILDING",
+    "SWIMMING POOL",
+    "KAPILA BHAVAN",
+    "ADITHI BHAVANAM",
+    "VASISHTA BHAVANAM",
+    "VASISHTA GYM",
+    "AGASTHYA BHAVANAM",
+    "GAUTHAMA BHAVANAM",
+    "VASISHTA GROUND",
+    "VASISHTA BADMINTON COURT",
+    "VASISHTA NIGHT CANTEEN",
+    "MILLET CAFE",
+    "SOPANAM IT CANTEEN",
+    "GREEN BRIDGE",
+    "PROJECT OFFICE",
+    "AB3",
+  ].sort();
 
   return (
     <div className="space-y-6 flex flex-col items-center">
@@ -148,14 +205,20 @@ export default function DashboardPage() {
 
           <div>
             <label className="block text-sm font-medium">Location Lost</label>
-            <input
-              type="text"
+            <select
               name="location_lost"
               value={lostItem.location_lost}
               onChange={handleChange}
               required
               className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
+            >
+              <option value="">Select a location</option>
+              {locations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

@@ -1,7 +1,6 @@
 {
   "name": "lost-and-found-mobile-app-backend",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "jest",
@@ -29,5 +28,9 @@
   },
   "devDependencies": {
     "jest": "^30.0.5"
-  }
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "description": ""
 }
