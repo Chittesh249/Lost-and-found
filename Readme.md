@@ -1,5 +1,6 @@
 
 # Amrita Retriever – Lost & Found Application
+<img src= "assets/logo.png">
 A cross-platform Lost & Found system built for students, staff, and administrators at Amrita.
 
 <p align="center">
