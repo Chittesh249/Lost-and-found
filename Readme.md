@@ -1,116 +1,109 @@
-🐕‍🦺 Amrita Retriever – Lost & Found App for Amrita University
 
-A cross-platform Lost & Found system for students, staff, and administrators.
+# Amrita Retriever – Lost & Found Application
+A cross-platform Lost & Found system built for students, staff, and administrators at Amrita.
 
-<p align="center"> <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-blue?style=flat-square"/> <img src="https://img.shields.io/badge/Frontend-Flutter-orange?style=flat-square"/> <img src="https://img.shields.io/badge/Backend-Node.js-green?style=flat-square"/> <img src="https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square"/> <img src="https://img.shields.io/badge/Auth-Supabase%20Auth-3ECF8E?style=flat-square"/> </p>
-📌 Overview
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Frontend-Flutter-orange?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Backend-Node.js-green?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Auth-Supabase%20Auth-3ECF8E?style=flat-square"/>
+</p>
 
-Amrita Retriever is a campus-wide lost and found application designed to streamline the process of reporting, viewing, and claiming lost items at Amrita University.
+---
+
+## Overview
+
+Amrita Retriever is a campus-wide lost and found application designed to streamline the reporting, listing, and claiming of lost items within Amrita University.
+
 It consists of:
+- Flutter Mobile Application (Students and Staff)
+- React-based Admin Dashboard (Administrators)
+- Node.js Backend integrated with Supabase
 
-📱 Flutter Mobile App (Students + Staff)
-🖥️ React Admin Dashboard (Admins)
-🔗 Node.js Backend with Supabase
+The platform ensures secure authentication, a clean user interface, and efficient item reporting and claim management.
 
-The system ensures secure authentication, clean UI, and fast reporting/claiming of items.
+---
 
-✨ Key Features
-👨‍🎓 For Students & Staff (Mobile App)
+## Key Features
 
-🔐 Login with Supabase authentication
+### For Students & Staff (Mobile Application)
+- Secure login using Supabase Authentication  
+- Browse lost items with:
+  - Photos  
+  - Location  
+  - Description  
+  - Date found  
+- Filter items by block, category, or keywords  
+- Submit claim requests  
+- Fully responsive UI for Android and iOS   
 
-🔍 Browse lost items with:
-Photos
-Location
-Description
-Date found
+### For Administrators (Web Dashboard)
+- Upload newly found items  
+- Add item details including name, image, location, date, and finder information  
+- Manage verification and claim processing  
+- Update claim instructions  
+- Filter, sort, and search across all items  
 
-🎯 Filter items by block, category, or keywords
+---
 
-📤 Submit a claim request
+## Tech Stack
 
-📲 Fully responsive UI for Android & iOS
+| Layer            | Technology                     |
+|------------------|--------------------------------|
+| Mobile App       | Flutter (Dart)                 |
+| Web Dashboard    | React.js, Tailwind CSS         |
+| Backend          | Node.js, Express.js            |
+| Database         | SupaBase                       |
+| Image Storage    | SupaBase Bucket                |
 
-🔑 Secure JWT-based API access
+---
 
-🛠️ For Admins (Web App)
+## Authentication Flow
 
-📤 Upload newly found items
-
-📝 Add details: name, image, location, date, finder’s details
-
-🪪 Manage verification and claiming process
-
-🔄 Update claim instructions
-
-🔎 Filter, Sort & Search all items
-
-🧰 Tech Stack
-Layer	Technology
-Mobile App	Flutter (Dart)
-
-Web Dashboard	React.js + Tailwind CSS
-
-Backend	Node.js + Express.js
-
-Authentication	Microsoft OAuth 2.0
-
-Database	MongoDB
-
-Image Storage	Amazon S3 Bucket
-
-🔐 Authentication Flow
-
-User initiates login → Redirects to Microsoft OAuth
-
-Microsoft validates identity & returns profile
-
-Backend creates or updates user in MongoDB
-
-User receives JWT token
-
-Token used for secure backend communication
-
-🗄️ Database Schema
+1. User initiates login and is redirected to Supabase.  
+2. SupaBase validates identity and returns the user profile.  
+3. Backend creates or updates the user entry in SupaBase.  
+---
 
 
+### Image Flow
+1. Images are uploaded and stored in the Supabase bucket.  
+2. Image URL and metadata are stored in Supabase for retrieval.
 
+---
 
-Image Flow:
+## UI Screenshots
 
-Images uploaded → stored in Supabase bucket
+Suggested screenshots to include:
+- Login Screen  
+- Student Lost Items View  
+- Admin Add Item Page  
+- Admin Claim Item Page  
+- Admin Dashboard  
 
-Supabase bucket URL + metadata → stored in Supabase
+(Add actual images in your repository’s `/assets` folder.)
 
-🖼️ UI Screenshots
+---
 
-📸 Login Screen  
-📸 Student Lost Items View  
-📸 Admin Add Item  
-📸 Admin Claim Item  
-📸 Admin Dashboard  
+## How to Run the Project
 
-(Add actual images in your repo’s /assets folder)
-
-🧪 How to Run the Project
-
-🖥 Backend Setup
-```
-cd backend
+### Backend Setup
+First clone the repository.
+Then, run the following:
+`cd backend
 npm install
-npm start
-```
-📱 Mobile App (Flutter)
-```
-cd mobile
+npm start`
+
+### Mobile Application:
+`cd frontend
 flutter run
-```
-🌐 Admin Dashboard
-```
-cd admin
+`
+
+### Admin Dashboard:
+`cd admin
 npm install
 npm start
-```
-👥 Team
+`
 
-Team 404 Not Lost
+
