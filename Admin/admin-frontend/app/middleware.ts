@@ -10,7 +10,9 @@ export async function middleware(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
 
   if (!authHeader) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // If no Auth header, it might be a cookie-based request (Browser)
+    // Let the route handler validate the session
+    return NextResponse.next()
   }
 
   const token = authHeader.replace('Bearer ', '')

@@ -71,8 +71,7 @@ class UsersDbClient {
 
 String _defaultBaseUrl() {
   // For web builds we can use relative path, for mobile/desktop use localhost by default
-  // Adjust if using emulators or real devices.
-  // Using '/api/user' aligns with backend routing.
+  // Update to point to the Admin Frontend deployment usually on port 3000 or the hosted URL
   return 'http://localhost:3000/api/user';
 }
 

@@ -1,13 +1,10 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import axios from 'axios';
 
 type User = {
     email: string;
+    id?: string;
 };
 
 const UserCards: React.FC = () => {
@@ -16,14 +13,17 @@ const UserCards: React.FC = () => {
 
     useEffect(() => {
         const fetchUsers = async () => {
-            const { data, error } = await supabase
-                .from('Users')
-                .select('email');
-            if (!error && data) {
-                setUsers(data);
-                console.log(data);  
+            try {
+                // Fetch from the secure Admin API
+                const response = await axios.get('/api/admin/users', {
+                    withCredentials: true // Ensure cookies (session) are sent if needed
+                });
+                setUsers(response.data);
+            } catch (error) {
+                console.error("Failed to fetch users", error);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
         fetchUsers();
     }, []);
@@ -31,21 +31,17 @@ const UserCards: React.FC = () => {
     if (loading) return <div>Loading...</div>;
 
     return (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-            {users.map(user => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {users.map((user, index) => (
                 <div
-                    key={user.email}
-                    style={{
-                        border: '1px solid #ccc',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        minWidth: '220px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                    }}
+                    key={user.id || index}
+                    className="p-4 border rounded-lg shadow-sm bg-white"
                 >
-                    <p>Email: {user.email}</p>
+                    <p className="font-medium text-gray-900">Email: {user.email}</p>
+                    {user.id && <p className="text-xs text-gray-500">ID: {user.id}</p>}
                 </div>
             ))}
+            {users.length === 0 && <p>No users found.</p>}
         </div>
     );
 };

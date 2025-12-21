@@ -13,7 +13,7 @@ document.getElementById().addEventListener('submit',async(e)=>{
     const user_password=document.getElementById().value.trim()
 
 
-    const{error:insertError}=await supabase.from('Admin').insert([{username:user_name,password:user_password}]);
+    const{error:insertError}=await supabase.from('Users').insert([{username:user_name,password:user_password}]);
 
 
     if (insertError){

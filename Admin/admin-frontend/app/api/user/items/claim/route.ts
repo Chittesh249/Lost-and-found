@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { supabaseServer } from '../../../../../lib/supabase-server'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function POST(req: Request) {
   const { item_id, answer, email } = await req.json()
+  const supabaseServer = await createServerSupabaseClient()
 
   const { data: item } = await supabaseServer
     .from('lost_items')

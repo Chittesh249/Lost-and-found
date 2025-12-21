@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:amrita_retriever/pages/item_details_page.dart';
-import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LostItemsScreen extends StatefulWidget {
   const LostItemsScreen({super.key});
@@ -30,30 +30,27 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
 
   Future<void> fetchItems() async {
     try {
-      final response = await http.get(
-        Uri.parse("https://lost-and-found-es98.onrender.com/api/user/get_items"),
-      );
+      final response = await Supabase.instance.client
+          .from('Lost_items')
+          .select()
+          .order('created_post', ascending: false);
 
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonData = jsonDecode(response.body);
+      final List<dynamic> jsonData = response as List<dynamic>;
 
-        setState(() {
-          allItems = jsonData.cast<Map<String, dynamic>>();
-          applyFilters();
+      setState(() {
+        allItems = jsonData.cast<Map<String, dynamic>>();
+        applyFilters();
 
-          uniqueLocations = allItems
-              .map((item) => item["location_lost"]?.toString() ?? "")
-              .where((loc) => loc.isNotEmpty)
-              .toSet()
-              .toList();
-          uniqueLocations.sort();
-          uniqueLocations = ["All", ...uniqueLocations];
+        uniqueLocations = allItems
+            .map((item) => item["location_lost"]?.toString() ?? "")
+            .where((loc) => loc.isNotEmpty)
+            .toSet()
+            .toList();
+        uniqueLocations.sort();
+        uniqueLocations = ["All", ...uniqueLocations];
 
-          isLoading = false;
-        });
-      } else {
-        throw Exception("Failed to fetch items: ${response.statusCode}");
-      }
+        isLoading = false;
+      });
     } catch (e) {
       print("Error fetching items: $e");
       setState(() {

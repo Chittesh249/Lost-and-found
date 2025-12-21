@@ -50,7 +50,7 @@ export default function DashboardPage() {
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setLostItem((prev) => ({ ...prev, [name]: value }));
@@ -94,9 +94,10 @@ export default function DashboardPage() {
         image: null,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
-      alert("Failed to add lost item");
+      const msg = error.response?.data?.error || "Failed to add lost item";
+      alert(msg);
     }
   };
 
@@ -231,8 +232,8 @@ export default function DashboardPage() {
                 value={lostItem.location_lost}
                 onValueChange={(value) =>
                   handleChange({
-                    target: { name: "location_lost", value },
-                  })
+                    target: { name: "location_lost", value } as any,
+                  } as any)
                 }
               >
                 <SelectTrigger>

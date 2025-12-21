@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { supabaseServer } from '../../../../../lib/supabase-server'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function GET() {
+  const supabaseServer = await createServerSupabaseClient()
   const { data, error } = await supabaseServer
     .from('lost_items')
     .select(`

@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "../../../../../lib/supabase-server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createServerSupabaseClient(); // <-- get the client
+    // Initialize Supabase Admin Client
+    // We try to use the service role key or secret key available in env
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({ error: "Server misconfiguration: Missing Supabase URL or Key" }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const formData = await req.formData();
-    console.log(formData)
     const image = formData.get("image") as File | null;
 
     // Required fields
@@ -25,13 +33,56 @@ export async function POST(req: Request) {
     const security_question = formData.get("security_question") as string | null;
     const answer = formData.get("answer") as string | null;
 
+
+    // --- ID Generation Logic Ported from Backend ---
+    function generatePrefix(location: string) {
+      if (!location) return "XX";
+      const words = location.trim().split(/\s+/);
+      let prefix = "";
+      for (let i = 0; i < Math.min(2, words.length); i++) {
+        prefix += words[i][0].toUpperCase();
+      }
+      const lastWord = words[words.length - 1];
+      if (!isNaN(Number(lastWord))) {
+        prefix += lastWord;
+      }
+      return prefix;
+    }
+
+    const prefix = generatePrefix(location_lost);
+
+    const { data: lastItem, error: fetchError } = await supabase
+      .from("Lost_items")
+      .select("item_id")
+      .ilike("item_id", `${prefix}%`)
+      .order("item_id", { ascending: false })
+      .limit(1);
+
+    if (fetchError) {
+      console.error("Fetch Error:", fetchError);
+      return NextResponse.json({ error: "Error fetching last item: " + fetchError.message }, { status: 400 });
+    }
+
+    let newNumber = 1;
+    if (lastItem && lastItem.length > 0) {
+      const lastId = lastItem[0].item_id;
+      // Extract number part: assuming format PREFIX + 000
+      const lastNum = parseInt(lastId.substring(prefix.length));
+      if (!isNaN(lastNum)) {
+        newNumber = lastNum + 1;
+      }
+    }
+
+    const item_id = `${prefix}${String(newNumber).padStart(3, "0")}`;
+    // -----------------------------------------------
+
     let image_url: string | null = null;
 
     // ---------- Image Upload ----------
     if (image) {
       const fileExt = image.name.split(".").pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `lost-images/${fileName}`;
+      const fileName = `${item_id}.${fileExt}`;
+      const filePath = `${fileName}`;
 
       const buffer = Buffer.from(await image.arrayBuffer());
 
@@ -43,7 +94,8 @@ export async function POST(req: Request) {
         });
 
       if (uploadError) {
-        return NextResponse.json({ error: uploadError.message }, { status: 400 });
+        console.error("Upload Error:", uploadError);
+        return NextResponse.json({ error: "Image upload failed: " + uploadError.message }, { status: 400 });
       }
 
       const { data } = supabase.storage
@@ -57,7 +109,7 @@ export async function POST(req: Request) {
     const { error: dbError } = await supabase
       .from("Lost_items")
       .insert({
-        item_id: crypto.randomUUID(), // REQUIRED
+        item_id,
         item_name,
         description,
         location_lost,
@@ -66,19 +118,19 @@ export async function POST(req: Request) {
         reported_by_roll,
         created_post: new Date().toISOString(),
         image_url,
-        security_question,
-        answer,
-        claimed: false,
+        security_question: security_question || null,
+        answer: answer || null,
       });
 
     if (dbError) {
-      return NextResponse.json({ error: dbError.message }, { status: 400 });
+      console.error("DB Error:", dbError);
+      return NextResponse.json({ error: "Database insert failed: " + dbError.message }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, item: { item_id } });
 
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Failed to create lost item" }, { status: 500 });
+  } catch (err: any) {
+    console.error("Server Error:", err);
+    return NextResponse.json({ error: "Failed to create lost item: " + (err.message || err) }, { status: 500 });
   }
 }
