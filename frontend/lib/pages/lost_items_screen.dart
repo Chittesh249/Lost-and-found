@@ -111,10 +111,11 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
     required List<String> options,
     required String selectedValue,
     required Function(String?) onChanged,
+    EdgeInsetsGeometry margin = const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
   }) {
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      margin: margin,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ExpansionTile(
         iconColor: const Color(0xFFD5316B),
@@ -124,7 +125,7 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFFD5316B),
+            color: Color.fromARGB(255, 132, 0, 46),
           ),
         ),
         children: options
@@ -194,17 +195,31 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                   ),
                 ),
 
-                buildFeatureButton(
-                  title: "Sort By",
-                  options: ["Newest First", "Oldest First"],
-                  selectedValue: selectedSort,
-                  onChanged: (value) => applySort(value!),
-                ),
-                buildFeatureButton(
-                  title: "Filter by Location",
-                  options: uniqueLocations,
-                  selectedValue: selectedLocation,
-                  onChanged: (value) => applyLocationFilter(value),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: buildFeatureButton(
+                          title: "Sort",
+                          options: ["Newest First", "Oldest First"],
+                          selectedValue: selectedSort,
+                          onChanged: (value) => applySort(value!),
+                          margin: EdgeInsets.zero,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: buildFeatureButton(
+                          title: "Filter",
+                          options: uniqueLocations,
+                          selectedValue: selectedLocation,
+                          onChanged: (value) => applyLocationFilter(value),
+                          margin: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
                 Expanded(
