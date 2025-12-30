@@ -46,40 +46,58 @@ const LostItems: React.FC = () => {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-10">
       <div>
-        <h2 className="font-semibold mb-4 text-xl">Pending Items</h2>
-        <div className="flex flex-wrap gap-4">
+        <h2 className="font-semibold mb-4 text-2xl border-b pb-2">Pending Items</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {lostItems
             .filter((item) => !item.claimed_by)
             .map((item) => (
-              <div key={item.item_id} className="dark:bg-zinc-600 border rounded-lg p-4 min-w-[220px] shadow-sm">
-                <img src={item.image_url} alt={item.item_name} className="w-full h-40 object-cover rounded-md mb-2" />
-                <p><b>Item:</b> {item.item_name}</p>
-                <p><b>Description:</b> {item.description}</p>
-                <p><b>Location:</b> {item.location_lost}</p>
-                <p><b>Date:</b> {item.date_lost}</p>
-                <p><b>Reported By:</b> {item.reported_by_name}</p>
+              <div key={item.item_id} className="dark:bg-zinc-800 bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
+                <div className="relative aspect-[4/3] w-full bg-gray-100">
+                  <img src={item.image_url} alt={item.item_name} className="w-full h-full object-cover" />
+                </div>
+                <div className="p-4 flex flex-col gap-2 flex-grow">
+                  <h3 className="font-bold text-lg truncate" title={item.item_name}>{item.item_name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2 flex-grow">{item.description}</p>
+                  <div className="mt-2 text-sm space-y-1">
+                    <p><span className="font-semibold">Loc:</span> {item.location_lost}</p>
+                    <p><span className="font-semibold">Date:</span> {new Date(item.date_lost).toLocaleDateString()}</p>
+                  </div>
+                  <div className="mt-auto pt-3 border-t text-xs text-muted-foreground">
+                    Reported by: {item.reported_by_name}
+                  </div>
+                </div>
               </div>
             ))}
-          {lostItems.filter((item) => !item.claimed_by).length === 0 && <p>No pending items.</p>}
+          {lostItems.filter((item) => !item.claimed_by).length === 0 && <p className="col-span-full text-center py-10 text-muted-foreground">No pending items.</p>}
         </div>
       </div>
 
       <div>
-        <h2 className="font-semibold mb-4 text-xl">Claimed Items</h2>
-        <div className="flex flex-wrap gap-4">
+        <h2 className="font-semibold mb-4 text-2xl border-b pb-2">Claimed Items</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {lostItems
             .filter((item) => item.claimed_by)
             .map((item) => (
-              <div key={item.item_id} className="text-background border rounded-lg p-4 min-w-[220px] shadow-sm  opacity-80">
-                <img src={item.image_url} alt={item.item_name} className="w-full h-40 object-cover rounded-md mb-2 grayscale" />
-                <p><b>Item:</b> {item.item_name}</p>
-                <p><b>Claimed By:</b> {item.claimed_by?.email}</p>
-                <p className="text-xs text-green-600 font-bold mt-2">RESOLVED</p>
+              <div key={item.item_id} className="dark:bg-zinc-800/50 bg-gray-50 border rounded-xl overflow-hidden opacity-75 hover:opacity-100 transition-opacity flex flex-col h-full">
+                <div className="relative aspect-[4/3] w-full bg-gray-200">
+                  <img src={item.image_url} alt={item.item_name} className="w-full h-full object-cover grayscale" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <span className="bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">Resolved</span>
+                  </div>
+                </div>
+
+                <div className="p-4 flex flex-col gap-2 flex-grow">
+                  <h3 className="font-bold text-lg truncate text-muted-foreground">{item.item_name}</h3>
+                  <div className="mt-auto text-sm">
+                    <p className="font-medium text-green-700 dark:text-green-400">Claimed by:</p>
+                    <p className="truncate" title={item.claimed_by?.email}>{item.claimed_by?.email}</p>
+                  </div>
+                </div>
               </div>
             ))}
-          {lostItems.filter((item) => item.claimed_by).length === 0 && <p>No claimed items yet.</p>}
+          {lostItems.filter((item) => item.claimed_by).length === 0 && <p className="col-span-full text-center py-10 text-muted-foreground">No claimed items yet.</p>}
         </div>
       </div>
     </div>

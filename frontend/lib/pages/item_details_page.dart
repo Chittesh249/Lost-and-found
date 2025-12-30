@@ -86,7 +86,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                     const SizedBox(height: 10),
                     infoRow("Date Found", widget.item["date_lost"]),
                     infoRow("Reported Person's Name", widget.item["reported_by_name"]),
-                    infoRow("Roll No", widget.item["roll_no"]),
+                    infoRow("Roll No", widget.item["reported_by_roll"]),
                     infoRow("Location", widget.item["location_lost"]),
                     const SizedBox(height: 16),
                     const Text(

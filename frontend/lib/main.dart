@@ -11,8 +11,8 @@ Future<void> main() async {
 
   // ✅ Initialize Supabase here using env vars
   await Supabase.initialize(
-    url: dotenv.env['DATABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_API_KEY']!,
+    url: dotenv.env['NEXT_PUBLIC_SUPABASE_URL']!,
+    anonKey: dotenv.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!,
   );
 
   runApp(const AmritaRetrieverApp());
