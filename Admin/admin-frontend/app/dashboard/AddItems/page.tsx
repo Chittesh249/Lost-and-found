@@ -22,6 +22,9 @@ import {
 } from "@/components/ui/select"
 
 
+import { useRef } from "react";
+import { Camera, X } from "lucide-react";
+
 interface LostItemForm {
   item_name: string;
   description: string;
@@ -49,6 +52,60 @@ export default function DashboardPage() {
     image: null,
   });
 
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Webcam refs and state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isWebcamOpen, setIsWebcamOpen] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
+  const startWebcam = async () => {
+    try {
+      setIsWebcamOpen(true);
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setStream(mediaStream);
+      // Wait for state update and ref to be attached
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      }, 100);
+    } catch (err) {
+      console.error("Error accessing webcam:", err);
+      alert("Could not access webcam. Please check permissions.");
+      setIsWebcamOpen(false);
+    }
+  };
+
+  const stopWebcam = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+    setIsWebcamOpen(false);
+  };
+
+  const captureWebcam = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], "webcam-capture.jpg", { type: "image/jpeg" });
+            setLostItem((prev) => ({ ...prev, image: file }));
+            setImagePreview(URL.createObjectURL(file));
+            stopWebcam();
+          }
+        }, "image/jpeg", 0.8);
+      }
+    }
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -58,7 +115,22 @@ export default function DashboardPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
-      setLostItem((prev) => ({ ...prev, image: e.target.files![0] }));
+      const file = e.target.files[0];
+      setLostItem((prev) => ({ ...prev, image: file }));
+      setImagePreview(URL.createObjectURL(file));
+      console.log('Mobile/Camera debug:', file.name, file.type, file.size);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const removeImage = () => {
+    setLostItem((prev) => ({ ...prev, image: null }));
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -93,6 +165,8 @@ export default function DashboardPage() {
         created_post: "",
         image: null,
       });
+      setImagePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
     } catch (error: any) {
       console.log(error);
@@ -301,11 +375,60 @@ export default function DashboardPage() {
             {/* Image Upload */}
             <div className="space-y-2">
               <Label>Item Image</Label>
+
+              {/* Hidden Input */}
               <Input
                 type="file"
+                ref={fileInputRef}
+                className="hidden"
                 accept="image/*"
+                capture="environment"
                 onChange={handleFileChange}
               />
+
+              {/* Custom UI */}
+              {!imagePreview && (
+                <div className="grid grid-cols-2 gap-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-32 flex flex-col items-center justify-center border-dashed border-2 hover:bg-muted/50 transition-colors"
+                    onClick={triggerFileInput}
+                  >
+                    <Camera className="h-8 w-8 mb-2 text-muted-foreground" />
+                    <span className="text-muted-foreground font-medium">Upload Image</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-32 flex flex-col items-center justify-center border-dashed border-2 hover:bg-muted/50 transition-colors"
+                    onClick={startWebcam}
+                  >
+                    <Camera className="h-8 w-8 mb-2 text-muted-foreground" />
+                    <span className="text-muted-foreground font-medium">Use Webcam</span>
+                  </Button>
+                </div>
+              )}
+
+              {imagePreview && (
+                <div className="relative w-full h-64 rounded-lg overflow-hidden border">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 rounded-full shadow-md"
+                    onClick={removeImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Submit */}
@@ -315,6 +438,44 @@ export default function DashboardPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Webcam Overlay */}
+      {isWebcamOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-background p-4 rounded-lg max-w-2xl w-full flex flex-col items-center gap-4 relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2"
+              onClick={stopWebcam}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+
+            <h3 className="text-xl font-semibold">Take a Photo</h3>
+
+            <div className="relative w-full aspect-video bg-black rounded overflow-hidden">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="flex gap-4 w-full">
+              <Button type="button" variant="outline" className="flex-1" onClick={stopWebcam}>
+                Cancel
+              </Button>
+              <Button type="button" className="flex-1" onClick={captureWebcam}>
+                Capture Photo
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
