@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:amrita_retriever/pages/item_details_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -35,7 +34,7 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
         authSupabaseUrl,
         dotenv.env['SUPABASE_ANON_KEY']!,
       );
-      final response = await supabase
+      final response = await supabase 
           .from('Lost_items')
           .select()
           .order('created_post', ascending: false);
@@ -57,7 +56,6 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
         isLoading = false;
       });
     } catch (e) {
-      print("Error fetching items: $e");
       setState(() {
         isLoading = false;
       });

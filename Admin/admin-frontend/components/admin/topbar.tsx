@@ -22,43 +22,80 @@ interface Notification {
   message: string
   timestamp: Date
   read: boolean
+  sourceId: string // claim_request.id (prevents duplicates)
 }
 
 export default function Topbar() {
-  const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
+  const router = useRouter()
   const supabase = createClient()
 
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // --------------------------------------------------
+  // LOAD EXISTING PENDING CLAIM REQUESTS
+  // --------------------------------------------------
+  const loadPendingClaims = async () => {
+    const { data, error } = await supabase
+      .from("claim_requests")
+      .select("id, item_id, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Failed to load pending claims:", error)
+      return
+    }
+
+    const pendingNotifications: Notification[] = data.map((row) => ({
+      id: crypto.randomUUID(),
+      sourceId: row.id,
+      message: `Pending claim request for item ${row.item_id}`,
+      timestamp: new Date(row.created_at),
+      read: false,
+    }))
+
+    setNotifications(pendingNotifications)
+    setUnreadCount(pendingNotifications.length)
+  }
+
+  // --------------------------------------------------
+  // REALTIME SUBSCRIPTION
+  // --------------------------------------------------
   useEffect(() => {
-    // Initial fetch of unread notifications could be here if we persisted them
-    // For now, we'll start fresh on reload as per requirements "whenever user claims"
+    loadPendingClaims()
 
     const channel = supabase
-      .channel('claim-notifications')
+      .channel("admin-claim-notifications")
+
+      // 🔔 NEW CLAIM REQUEST
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'Lost_items',
+          event: "INSERT",
+          schema: "public",
+          table: "claim_requests",
         },
         (payload) => {
-          const newData = payload.new as any
-          const oldData = payload.old as any
+          const row = payload.new as any
 
-          // Check if item was just claimed
-          if (newData.claimed === true && oldData.claimed === false) {
-            const newNotification: Notification = {
-              id: crypto.randomUUID(),
-              message: `Item ${newData.item_name || newData.item_id} has been claimed!`,
-              timestamp: new Date(),
-              read: false
+          setNotifications((prev) => {
+            // Prevent duplicates
+            if (prev.some((n) => n.sourceId === row.id)) {
+              return prev
             }
 
-            setNotifications(prev => [newNotification, ...prev])
-            setUnreadCount(prev => prev + 1)
-          }
+            const notification: Notification = {
+              id: crypto.randomUUID(),
+              sourceId: row.id,
+              message: `New claim request for item ${row.item_id}`,
+              timestamp: new Date(row.created_at),
+              read: false,
+            }
+
+            setUnreadCount((count) => count + 1)
+            return [notification, ...prev]
+          })
         }
       )
       .subscribe()
@@ -69,27 +106,25 @@ export default function Topbar() {
   }, [supabase])
 
   const handleLogout = async () => {
-    try {
-      await axios.post("/api/admin/auth/logout")
-    } catch (error) {
-      console.error("Logout failed:", error)
-    }
+    await axios.post("/api/admin/auth/logout")
     router.replace("/Login")
     router.refresh()
-    window.history.pushState(null, "", "/Login")
   }
 
   const handleNotificationClick = () => {
     setUnreadCount(0)
   }
 
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 md:px-6">
         <Sheet>
           <SheetTrigger asChild className="md:hidden">
-            <Button size="icon" variant="outline" aria-label="Open navigation menu">
-              <Menu className="size-4" aria-hidden />
+            <Button size="icon" variant="outline">
+              <Menu className="size-4" />
             </Button>
           </SheetTrigger>
           <SheetContent side="bottom" className="p-0">
@@ -100,61 +135,51 @@ export default function Topbar() {
           </SheetContent>
         </Sheet>
 
-        <div className="ml-0 w-full md:ml-2 md:w-auto md:flex-1">
-          <form role="search" className="w-full max-w-sm">
-            <Input type="search" placeholder="Search..." className="w-full" aria-label="Search" />
-          </form>
+        <div className="flex-1">
+          <Input type="search" placeholder="Search..." />
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Notifications"
-                className="relative"
-                onClick={handleNotificationClick}
-              >
-                <Bell className="size-4" aria-hidden />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-600" />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="end">
-              <div className="p-4 border-b">
-                <h4 className="font-semibold leading-none">Notifications</h4>
-              </div>
-              <ScrollArea className="h-[300px]">
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    No new notifications
-                  </div>
-                ) : (
-                  <div className="flex flex-col">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className="p-4 border-b last:border-0 hover:bg-muted/50 transition-colors"
-                      >
-                        <p className="text-sm font-medium">{notification.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {notification.timestamp.toLocaleTimeString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </PopoverContent>
-          </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={handleNotificationClick}
+            >
+              <Bell className="size-4" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-600" />
+              )}
+            </Button>
+          </PopoverTrigger>
 
-          <ThemeToggle />
-          <Button variant="default" size="default" aria-label="Notifications" onClick={handleLogout}>
-            Logout
-          </Button>
-        </div>
+          <PopoverContent className="w-80 p-0" align="end">
+            <div className="p-4 border-b font-semibold">
+              Pending Notifications
+            </div>
+
+            <ScrollArea className="h-[300px]">
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No pending claim requests
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div key={n.id} className="p-4 border-b">
+                    <p className="text-sm font-medium">{n.message}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {n.timestamp.toLocaleString()}
+                    </p>
+                  </div>
+                ))
+              )}
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
+
+        <ThemeToggle />
+        <Button onClick={handleLogout}>Logout</Button>
       </div>
     </header>
   )
