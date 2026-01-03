@@ -17,7 +17,7 @@
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
-    "@supabase/supabase-js": "^2.56.1",
+    "@supabase/supabase-js": "^2.89.0",
     "@vercel/analytics": "^1.5.0",
     "axios": "^1.11.0",
     "bcrypt": "^6.0.0",

@@ -9,7 +9,7 @@ import { ThemeToggle } from "./theme-toggle"
 import { useRouter } from "next/navigation"
 import axios from "axios"
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase-client"
+import { supabase } from "../../lib/realtimeSupabaseClient"
 import {
   Popover,
   PopoverContent,
@@ -27,7 +27,6 @@ interface Notification {
 
 export default function Topbar() {
   const router = useRouter()
-  const supabase = createClient()
 
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -46,7 +45,6 @@ export default function Topbar() {
       console.error("Failed to load pending claims:", error)
       return
     }
-
     const pendingNotifications: Notification[] = data.map((row) => ({
       id: crypto.randomUUID(),
       sourceId: row.id,
@@ -77,6 +75,7 @@ export default function Topbar() {
           table: "claim_requests",
         },
         (payload) => {
+          console.log({payload});
           const row = payload.new as any
 
           setNotifications((prev) => {
@@ -103,7 +102,7 @@ export default function Topbar() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase])
+  }, [])
 
   const handleLogout = async () => {
     await axios.post("/api/admin/auth/logout")
@@ -149,7 +148,7 @@ export default function Topbar() {
             >
               <Bell className="size-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-600" />
+                <span className="absolute -top-1 -right-1 h-5 w-5 text-xs rounded-full bg-red-600 text-white flex items-center justify-center font-semibold">{unreadCount}</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -166,7 +165,7 @@ export default function Topbar() {
                 </div>
               ) : (
                 notifications.map((n) => (
-                  <div key={n.id} className="p-4 border-b">
+                  <div key={n.id} className="p-4 border-b cursor-pointer hover:bg-accent/50">
                     <p className="text-sm font-medium">{n.message}</p>
                     <p className="text-xs text-muted-foreground">
                       {n.timestamp.toLocaleString()}

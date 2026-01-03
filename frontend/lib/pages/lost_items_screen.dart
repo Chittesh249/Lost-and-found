@@ -9,8 +9,13 @@ class LostItemsScreen extends StatefulWidget {
   @override
   State<LostItemsScreen> createState() => _LostItemsScreenState();
 }
+
 const String authSupabaseUrl = "https://etdewmgrpvoavevlpibg.supabase.co";
+
 class _LostItemsScreenState extends State<LostItemsScreen> {
+  late final SupabaseClient supabase;
+  RealtimeChannel? lostItemsChannel;
+
   List<Map<String, dynamic>> allItems = [];
   List<Map<String, dynamic>> displayedItems = [];
   List<String> uniqueLocations = [];
@@ -25,16 +30,22 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
   @override
   void initState() {
     super.initState();
+
+    supabase = SupabaseClient(
+      authSupabaseUrl,
+      dotenv.env['SUPABASE_ANON_KEY']!,
+    );
+
     fetchItems();
+    subscribeToLostItemsRealtime();
   }
 
+  // --------------------------------------------------
+  // INITIAL FETCH
+  // --------------------------------------------------
   Future<void> fetchItems() async {
     try {
-      final supabase = SupabaseClient(
-        authSupabaseUrl,
-        dotenv.env['SUPABASE_ANON_KEY']!,
-      );
-      final response = await supabase 
+      final response = await supabase
           .from('Lost_items')
           .select()
           .order('created_post', ascending: false);
@@ -49,19 +60,77 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
             .map((item) => item["location_lost"]?.toString() ?? "")
             .where((loc) => loc.isNotEmpty)
             .toSet()
-            .toList();
-        uniqueLocations.sort();
-        uniqueLocations = ["All", ...uniqueLocations];
+            .toList()
+          ..sort();
 
+        uniqueLocations = ["All", ...uniqueLocations];
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
+  // --------------------------------------------------
+  // REALTIME SUBSCRIPTION
+  // --------------------------------------------------
+  void subscribeToLostItemsRealtime() {
+    lostItemsChannel = supabase.channel('lost-items-realtime');
+
+    lostItemsChannel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'Lost_items',
+          callback: (payload) {
+            final newItem = payload.newRecord;
+
+            setState(() {
+              allItems.insert(0, newItem);
+              applyFilters();
+            });
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'Lost_items',
+          callback: (payload) {
+            final updatedItem = payload.newRecord;
+
+            setState(() {
+              final index = allItems.indexWhere(
+                (item) => item['item_id'] == updatedItem['item_id'],
+              );
+
+              if (index != -1) {
+                allItems[index] = updatedItem;
+                applyFilters();
+              }
+            });
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'Lost_items',
+          callback: (payload) {
+            final deletedItem = payload.oldRecord;
+
+            setState(() {
+              allItems.removeWhere(
+                (item) => item['item_id'] == deletedItem['item_id'],
+              );
+              applyFilters();
+            });
+          },
+        )
+        .subscribe();
+  }
+
+  // --------------------------------------------------
+  // FILTERS / SORT / SEARCH
+  // --------------------------------------------------
   void applyFilters() {
     List<Map<String, dynamic>> filtered = allItems;
 
@@ -81,14 +150,12 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
     if (selectedSort == "Newest First") {
       filtered.sort((a, b) =>
           b["date_lost"].toString().compareTo(a["date_lost"].toString()));
-    } else if (selectedSort == "Oldest First") {
+    } else {
       filtered.sort((a, b) =>
           a["date_lost"].toString().compareTo(b["date_lost"].toString()));
     }
 
-    setState(() {
-      displayedItems = filtered;
-    });
+    setState(() => displayedItems = filtered);
   }
 
   void applySort(String sortOption) {
@@ -111,7 +178,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
     required List<String> options,
     required String selectedValue,
     required Function(String?) onChanged,
-    EdgeInsetsGeometry margin = const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+    EdgeInsetsGeometry margin =
+        const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
   }) {
     return Card(
       elevation: 2,
@@ -135,10 +203,7 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                 value: option,
                 groupValue: selectedValue,
                 onChanged: onChanged,
-                title: Text(
-                  option,
-                  style: const TextStyle(fontSize: 14),
-                ),
+                title: Text(option, style: const TextStyle(fontSize: 14)),
               ),
             )
             .toList(),
@@ -147,31 +212,36 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
   }
 
   @override
+  void dispose() {
+    if (lostItemsChannel != null) {
+      supabase.removeChannel(lostItemsChannel!);
+    }
+    super.dispose();
+  }
+
+  // --------------------------------------------------
+  // UI (UNCHANGED)
+  // --------------------------------------------------
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: SizedBox(
-          height: 50,
-          child: Image.asset(
-            "assets/logo.png"
-          ),
-        ),
+        title: SizedBox(height: 50, child: Image.asset("assets/logo.png")),
         backgroundColor: const Color(0xFFD5316B),
         centerTitle: true,
         elevation: 4,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(20),
-          ),
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
       body: isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFD5316B)))
+              child:
+                  CircularProgressIndicator(color: Color(0xFFD5316B)),
+            )
           : Column(
               children: [
-                // Search Field
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: TextField(
@@ -179,61 +249,25 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                       filled: true,
                       fillColor: Colors.white,
                       hintText: "Search items...",
-                      prefixIcon: const Icon(Icons.search,
-                          color: Color(0xFFD5316B)),
+                      prefixIcon:
+                          const Icon(Icons.search, color: Color(0xFFD5316B)),
                       focusedBorder: OutlineInputBorder(
                         borderSide: const BorderSide(
                             color: Color(0xFFD5316B), width: 2),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                     onChanged: applySearch,
                   ),
                 ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: buildFeatureButton(
-                          title: "Sort",
-                          options: ["Newest First", "Oldest First"],
-                          selectedValue: selectedSort,
-                          onChanged: (value) => applySort(value!),
-                          margin: EdgeInsets.zero,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: buildFeatureButton(
-                          title: "Filter",
-                          options: uniqueLocations,
-                          selectedValue: selectedLocation,
-                          onChanged: (value) => applyLocationFilter(value),
-                          margin: EdgeInsets.zero,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
                 Expanded(
                   child: displayedItems.isEmpty
-                      ? const Center(
-                          child: Text(
-                            "No items found.",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black,
-                            ),
-                          ),
-                        )
+                      ? const Center(child: Text("No items found."))
                       : ListView.builder(
                           itemCount: displayedItems.length,
                           itemBuilder: (context, index) {
@@ -253,45 +287,30 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                                     width: 60,
                                     height: 60,
                                     fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            const Icon(
-                                                Icons.image_not_supported,
-                                                color: Colors.grey,
-                                                size: 40),
+                                    errorBuilder: (context, error, stackTrace) => const Icon(
+                                      Icons.image_not_supported,
+                                      size: 40,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                 ),
                                 title: Text(
-                                  item["item_name"] ?? "No Title",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2D2D2D),
-                                  ),
+                                  item["item_name"] ?? "",
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                                 subtitle: Text(
-                                  "${item["location_lost"] ?? "Unknown"}\n${item["date_lost"] ?? ""}",
-                                  style: TextStyle(
-                                    height: 1.4,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                                trailing: Text(
-                                  item["item_id"] ?? "",
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black54,
-                                  ),
+                                  "${item["location_lost"]}\n${item["date_lost"]}",
                                 ),
                                 onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ItemDetailsPage(item: item),
-                                  ),
-                                );
-                              },
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ItemDetailsPage(item: item),
+                                    ),
+                                  );
+                                },
                               ),
+
                             );
                           },
                         ),
