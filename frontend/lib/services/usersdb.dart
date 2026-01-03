@@ -24,7 +24,7 @@ class UsersDbClient {
     required String email,
     required String password,
   }) async {
-    final Uri uri = Uri.parse('$baseUrl/signup');
+    final Uri uri = Uri.parse('$baseUrl/api/user/signup');
     http.Response response;
     try {
       response = await httpClient

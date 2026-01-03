@@ -1,5 +1,6 @@
-import 'package:amrita_retriever/services/usersdb.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -14,17 +15,15 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  final UsersDbClient _client = UsersDbClient();
+  final supabase = Supabase.instance.client;
 
   bool _loading = false;
   String? _error;
-  String? _success;
 
   Future<void> _signup() async {
     setState(() {
       _loading = true;
       _error = null;
-      _success = null;
     });
 
     final String email = _emailController.text.trim();
@@ -38,6 +37,7 @@ class _SignupPageState extends State<SignupPage> {
       });
       return;
     }
+
     if (password != confirm) {
       setState(() {
         _loading = false;
@@ -47,21 +47,29 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     try {
-      final RegisterResponse res =
-          await _client.registerUser(email: email, password: password);
-      setState(() {
-        _success = res.message;
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_success ?? 'Registered')),
+      final AuthResponse res = await supabase.auth.signUp(
+        email: email,
+        password: password,
       );
+
+      if (res.user == null) {
+        throw const AuthException('Signup failed. Please try again.');
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully. Verify your email.'),
+        ),
+      );
+
       Navigator.pop(context);
-    } on UsersDbException catch (e) {
+    } on AuthException catch (e) {
       setState(() {
         _error = e.message;
       });
-    } catch (e) {
+    } catch (_) {
       setState(() {
         _error = 'Unexpected error occurred';
       });
@@ -86,7 +94,10 @@ class _SignupPageState extends State<SignupPage> {
         centerTitle: true,
         title: const Text(
           'Sign Up',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: Padding(
@@ -102,53 +113,59 @@ class _SignupPageState extends State<SignupPage> {
 
             TextField(
               controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'Email',
                 labelStyle: const TextStyle(color: primaryColor),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderSide:
+                      const BorderSide(color: primaryColor, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              keyboardType: TextInputType.emailAddress,
             ),
+
             const SizedBox(height: 16),
 
             TextField(
               controller: _passwordController,
+              obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Password',
                 labelStyle: const TextStyle(color: primaryColor),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderSide:
+                      const BorderSide(color: primaryColor, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              obscureText: true,
             ),
+
             const SizedBox(height: 16),
 
             TextField(
               controller: _confirmPasswordController,
+              obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Confirm Password',
                 labelStyle: const TextStyle(color: primaryColor),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderSide:
+                      const BorderSide(color: primaryColor, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              obscureText: true,
             ),
+
             const SizedBox(height: 20),
 
             _loading
@@ -158,7 +175,8 @@ class _SignupPageState extends State<SignupPage> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
