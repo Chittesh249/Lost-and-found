@@ -3,28 +3,23 @@ import 'package:amrita_retriever/pages/item_details_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class LostItemsTab extends StatefulWidget {
-  const LostItemsTab({super.key});
+class FoundItemsTab extends StatefulWidget {
+  const FoundItemsTab({super.key});
 
   @override
-  State<LostItemsTab> createState() => _LostItemsTabState();
+  State<FoundItemsTab> createState() => _FoundItemsTabState();
 }
 
 const String authSupabaseUrl = "https://etdewmgrpvoavevlpibg.supabase.co";
 
-class _LostItemsTabState extends State<LostItemsTab> {
+class _FoundItemsTabState extends State<FoundItemsTab> {
   late final SupabaseClient supabase;
-  RealtimeChannel? lostItemsChannel;
+  RealtimeChannel? foundItemsChannel;
 
   List<Map<String, dynamic>> allItems = [];
   List<Map<String, dynamic>> displayedItems = [];
-  List<String> uniqueLocations = [];
-
+  
   bool isLoading = true;
-
-  // Filters
-  String selectedSort = "Newest First";
-  String selectedLocation = "All";
   String searchQuery = "";
 
   @override
@@ -37,35 +32,23 @@ class _LostItemsTabState extends State<LostItemsTab> {
     );
 
     fetchItems();
-    subscribeToLostItemsRealtime();
+    subscribeToFoundItemsRealtime();
   }
 
-  // --------------------------------------------------
-  // INITIAL FETCH
-  // --------------------------------------------------
   Future<void> fetchItems() async {
     try {
       final response = await supabase
-          .from('Lost_items')
+          .from('Found_items')
           .select()
-          .order('created_post', ascending: false);
-
-      final List<dynamic> jsonData = response as List<dynamic>;
+          .order('created_at', ascending: false);
 
       if (!mounted) return;
+
+      final List<dynamic> jsonData = response as List<dynamic>;
 
       setState(() {
         allItems = jsonData.cast<Map<String, dynamic>>();
         applyFilters();
-
-        uniqueLocations = allItems
-            .map((item) => item["location_lost"]?.toString() ?? "")
-            .where((loc) => loc.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-
-        uniqueLocations = ["All", ...uniqueLocations];
         isLoading = false;
       });
     } catch (e) {
@@ -73,56 +56,18 @@ class _LostItemsTabState extends State<LostItemsTab> {
     }
   }
 
-  // --------------------------------------------------
-  // REALTIME SUBSCRIPTION
-  // --------------------------------------------------
-  void subscribeToLostItemsRealtime() {
-    lostItemsChannel = supabase.channel('lost-items-realtime');
+  void subscribeToFoundItemsRealtime() {
+    foundItemsChannel = supabase.channel('found-items-realtime');
 
-    lostItemsChannel!
+    foundItemsChannel!
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
-          table: 'Lost_items',
+          table: 'Found_items',
           callback: (payload) {
             final newItem = payload.newRecord;
-
             setState(() {
               allItems.insert(0, newItem);
-              applyFilters();
-            });
-          },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: 'Lost_items',
-          callback: (payload) {
-            final updatedItem = payload.newRecord;
-
-            setState(() {
-              final index = allItems.indexWhere(
-                (item) => item['item_id'] == updatedItem['item_id'],
-              );
-
-              if (index != -1) {
-                allItems[index] = updatedItem;
-                applyFilters();
-              }
-            });
-          },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.delete,
-          schema: 'public',
-          table: 'Lost_items',
-          callback: (payload) {
-            final deletedItem = payload.oldRecord;
-
-            setState(() {
-              allItems.removeWhere(
-                (item) => item['item_id'] == deletedItem['item_id'],
-              );
               applyFilters();
             });
           },
@@ -130,17 +75,8 @@ class _LostItemsTabState extends State<LostItemsTab> {
         .subscribe();
   }
 
-  // --------------------------------------------------
-  // FILTERS / SORT / SEARCH
-  // --------------------------------------------------
   void applyFilters() {
     List<Map<String, dynamic>> filtered = allItems;
-
-    if (selectedLocation != "All") {
-      filtered = filtered
-          .where((item) => item["location_lost"] == selectedLocation)
-          .toList();
-    }
 
     if (searchQuery.isNotEmpty) {
       filtered = filtered.where((item) {
@@ -148,15 +84,6 @@ class _LostItemsTabState extends State<LostItemsTab> {
         return name.contains(searchQuery.toLowerCase());
       }).toList();
     }
-
-    if (selectedSort == "Newest First") {
-      filtered.sort((a, b) =>
-          b["date_lost"].toString().compareTo(a["date_lost"].toString()));
-    } else {
-      filtered.sort((a, b) =>
-          a["date_lost"].toString().compareTo(b["date_lost"].toString()));
-    }
-
     setState(() => displayedItems = filtered);
   }
 
@@ -167,23 +94,16 @@ class _LostItemsTabState extends State<LostItemsTab> {
 
   @override
   void dispose() {
-    if (lostItemsChannel != null) {
-      supabase.removeChannel(lostItemsChannel!);
+    if (foundItemsChannel != null) {
+      supabase.removeChannel(foundItemsChannel!);
     }
     super.dispose();
   }
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    // Removed Scaffold and AppBar
     return isLoading
-        ? const Center(
-            child:
-                CircularProgressIndicator(color: Color(0xFFD5316B)),
-          )
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFFD5316B)))
         : Column(
             children: [
               Padding(
@@ -192,17 +112,14 @@ class _LostItemsTabState extends State<LostItemsTab> {
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.white,
-                    hintText: "Search lost items...",
-                    prefixIcon:
-                        const Icon(Icons.search, color: Color(0xFFD5316B)),
+                    hintText: "Search found items...",
+                    prefixIcon: const Icon(Icons.search, color: Color(0xFFD5316B)),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                          color: Color(0xFFD5316B), width: 2),
+                      borderSide: const BorderSide(color: Color(0xFFD5316B), width: 2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderSide:
-                          BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
@@ -218,8 +135,7 @@ class _LostItemsTabState extends State<LostItemsTab> {
                           final item = displayedItems[index];
                           return Card(
                             elevation: 3,
-                            margin: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 12),
+                            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -243,7 +159,7 @@ class _LostItemsTabState extends State<LostItemsTab> {
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Text(
-                                "${item["location_lost"]}\n${item["date_lost"]}",
+                                "${item["location_found"] ?? 'Unknown Location'}\n${item["date_found"] ?? ''}",
                               ),
                               onTap: () {
                                 Navigator.push(
@@ -254,7 +170,6 @@ class _LostItemsTabState extends State<LostItemsTab> {
                                 );
                               },
                             ),
-
                           );
                         },
                       ),
@@ -263,4 +178,3 @@ class _LostItemsTabState extends State<LostItemsTab> {
           );
   }
 }
-

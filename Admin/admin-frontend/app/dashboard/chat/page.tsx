@@ -56,6 +56,9 @@ export default function UserPage() {
   //   setLogs((l) => [...l, `broadcast sent: ${msg}`])
   //   setBroadcastMsg("")
   // }
+  useEffect(() => {
+    // Placeholder for any initialization logic if needed in the future
+  }, [])
 
   return (
     <div className="space-y-6 overflow-y-scroll p-4">

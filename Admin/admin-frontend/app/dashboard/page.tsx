@@ -20,7 +20,7 @@ async function getStats() {
   // Count Claimed Items (assuming 'claims' table tracks claims, OR we check a status)
   // Checking 'claims' table based on previously seen myclaims/route.ts
   const { count: claimedItemsCount, error: claimedItemsError } = await supabase
-    .from("claims")
+    .from("claim_requests")
     .select("*", { count: "exact", head: true });
 
   return {
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard title="Total Users" value={stats.users.toString()} trend="Active Accounts" trendTone="neutral" />
         <KpiCard title="Lost Items" value={stats.lostItems.toString()} trend="Reported Items" trendTone="neutral" />
-        <KpiCard title="Claimed Items" value={stats.claimedItems.toString()} trend="Successfully Returned" trendTone="positive" />
+        <KpiCard title="Claimed Requests" value={stats.claimedItems.toString()} trend="Pending requests" trendTone="negative" />
       </section>
     </div>
   )

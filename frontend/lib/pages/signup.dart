@@ -11,6 +11,7 @@ class SignupPage extends StatefulWidget {
 
 class _SignupPageState extends State<SignupPage> {
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -27,6 +28,7 @@ class _SignupPageState extends State<SignupPage> {
     });
 
     final String email = _emailController.text.trim();
+    final String phone = _phoneController.text.trim();
     final String password = _passwordController.text;
     final String confirm = _confirmPasswordController.text;
 
@@ -50,6 +52,9 @@ class _SignupPageState extends State<SignupPage> {
       final AuthResponse res = await supabase.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'phone_number': phone,
+        },
       );
 
       if (res.user == null) {
@@ -116,6 +121,25 @@ class _SignupPageState extends State<SignupPage> {
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'Email',
+                labelStyle: const TextStyle(color: primaryColor),
+                focusedBorder: OutlineInputBorder(
+                  borderSide:
+                      const BorderSide(color: primaryColor, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Phone Number',
                 labelStyle: const TextStyle(color: primaryColor),
                 focusedBorder: OutlineInputBorder(
                   borderSide:

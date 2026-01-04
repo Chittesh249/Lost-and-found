@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ------------------------------------------------------------
 // SUPABASE CLIENT (AUTH PROJECT ONLY)
@@ -145,6 +146,8 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                   _buildDetailsCard(),
                   const SizedBox(height: 32),
                   if (!_claimed) _buildClaimSection(),
+                  const SizedBox(height: 32),
+                  _buildContactSection(),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -347,5 +350,182 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
         ],
       ),
     );
+  }
+  bool _securityCleared = false;
+
+  // ... (existing helper methods)
+
+  // ------------------------------------------------------------
+  // SECURITY VERIFICATION
+  // ------------------------------------------------------------
+  void _verifySecurityAnswer() {
+    final controller = TextEditingController();
+    final correctAnswer = widget.item["security_answer"]?.toString().trim().toLowerCase();
+
+    if (correctAnswer == null || correctAnswer.isEmpty) {
+        // No answer stored, should we allow? 
+        // If security_question is set but no answer, it's a bad state. 
+        // Assume allowed or show error. Let's assume allowed if logic fails.
+        setState(() => _securityCleared = true);
+        return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Security Check"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             Text("Question: ${widget.item["security_question"] ?? 'Unknown'}"),
+             const SizedBox(height: 12),
+             TextField(
+               controller: controller,
+               decoration: const InputDecoration(labelText: "Your Answer"),
+             ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () {
+               final check = controller.text.trim().toLowerCase();
+               if (check == correctAnswer) {
+                 Navigator.pop(context);
+                 setState(() => _securityCleared = true);
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text("Verified! Contact info revealed."), backgroundColor: Colors.green),
+                 );
+               } else {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text("Incorrect answer."), backgroundColor: Colors.red),
+                 );
+               }
+            },
+            child: const Text("Verify"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactSection() {
+    final contactInfo = widget.item["contact_info"] ?? widget.item["data"]?["phone_number"];
+    
+    if (contactInfo == null || contactInfo.toString().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Check if security question exists
+    final hasSecurityQuestion = widget.item["security_question"] != null && 
+                                widget.item["security_question"].toString().isNotEmpty;
+    
+    // Check if current user is the reporter
+    final user = supabase.auth.currentUser;
+    final isReporter = user != null && user.id == widget.item["reported_by"];
+
+    // If no security question or user is reporter or already cleared, show contacts
+    if (!hasSecurityQuestion || isReporter || _securityCleared) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 10)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Contact Owner",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF2D2D2D))),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _launchCaller(contactInfo),
+                    icon: const Icon(Icons.phone),
+                    label: const Text("Call"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _launchWhatsApp(contactInfo),
+                    icon: const Icon(Icons.message), 
+                    label: const Text("WhatsApp"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+       // Show Locked State
+       return Container(
+         margin: const EdgeInsets.symmetric(horizontal: 20),
+         padding: const EdgeInsets.all(24),
+         decoration: BoxDecoration(
+           color: Colors.grey.shade100,
+           borderRadius: BorderRadius.circular(24),
+           border: Border.all(color: Colors.grey.shade300),
+         ),
+         child: Column(
+           children: [
+             const Icon(Icons.lock_outline, size: 40, color: Colors.grey),
+             const SizedBox(height: 12),
+             const Text(
+               "Contact Info Locked",
+               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+             ),
+             const SizedBox(height: 8),
+             const Text("Answer the security question to contact the founder."),
+             const SizedBox(height: 16),
+             ElevatedButton(
+               onPressed: _verifySecurityAnswer,
+               child: const Text("Answer Security Question"),
+             )
+           ],
+         ),
+       );
+    }
+  }
+
+  Future<void> _launchCaller(String number) async {
+    final Uri launchUri = Uri(scheme: 'tel', path: number);
+    if (!await launchUrl(launchUri)) {
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not launch dialer")));
+      }
+    }
+  }
+
+  Future<void> _launchWhatsApp(String number) async {
+    // WhatsApp URL format: https://wa.me/<number>
+    // Number should ideally use international format without +, but flexible.
+    final Uri launchUri = Uri.parse("https://wa.me/$number");
+    if (!await launchUrl(launchUri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not launch WhatsApp")));
+      }
+    }
   }
 }

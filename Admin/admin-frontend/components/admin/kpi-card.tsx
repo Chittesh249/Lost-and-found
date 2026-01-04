@@ -5,7 +5,7 @@ type Props = {
   title: string
   value: string
   trend?: string
-  trendTone?: "positive" | "neutral"
+  trendTone?: "positive" | "neutral" | "negative"
 }
 
 export function KpiCard({ title, value, trend, trendTone = "neutral" }: Props) {
@@ -23,6 +23,9 @@ export function KpiCard({ title, value, trend, trendTone = "neutral" }: Props) {
               trendTone === "positive"
                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                 : "bg-muted text-foreground",
+              trendTone === "negative"
+              ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+              : null
             )}
           >
             {trend}

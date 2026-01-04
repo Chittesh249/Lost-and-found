@@ -1,3 +1,4 @@
+import 'package:amrita_retriever/pages/home_page.dart';
 import 'package:amrita_retriever/pages/lost_items_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -38,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const LostItemsScreen()),
+          MaterialPageRoute(builder: (context) => const HomePage()),
         );
       } else {
         setState(() {
