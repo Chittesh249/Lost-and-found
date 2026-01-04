@@ -153,13 +153,19 @@ class PostsDbClient {
   }
 
   // Close Post
+  // Close Post
   Future<void> closePost(int postId, String resolvedBy) async {
     try {
-      await supabase.from('posts').update({
+      final response = await supabase.from('posts').update({
         'status': 'CLOSED',
         'resolved_by': resolvedBy
-      }).eq('post_id', postId);
+      }).eq('post_id', postId).select();
+      
+      if (response.isEmpty) {
+         throw PostsDbException(message: 'Update failed. You may not have permission to close this post.');
+      }
     } catch (e) {
+      if (e is PostsDbException) rethrow;
       throw PostsDbException(message: 'Failed to close post: $e');
     }
   }

@@ -32,7 +32,12 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
   void initState() {
     super.initState();
     _fetchComments();
-    _setupRealtime(); // Initialize Realtime Listener
+    _setupRealtime();
+    
+    // For LOST items, automatically fetch poster's contact info
+    if (widget.item['post_type'] == 'LOST' && !_isOwner) {
+      _fetchPosterContact();
+    }
   }
 
   @override
@@ -103,6 +108,28 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to comment: $e"))
       );
+    }
+  }
+
+  Future<void> _fetchPosterContact() async {
+    try {
+      final userId = widget.item['user_id'];
+      final userRes = await supabase
+          .from('users')
+          .select('email, phone')
+          .eq('user_id', userId)
+          .single();
+      
+      if (mounted) {
+        setState(() {
+          _revealedContact = {
+            'owner_email': userRes['email'],
+            'owner_phone': userRes['phone'],
+          };
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching poster contact: $e");
     }
   }
 
@@ -219,7 +246,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                controller: controller, 
                decoration: const InputDecoration(
                  labelText: "Name of person", 
-                 hintText: "e.g. John Doe"
+                 hintText: "e.g. Arun"
                )
             ),
           ],
@@ -249,6 +276,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
+            iconTheme: const IconThemeData(color: Color(0xFFD5316B)),
             flexibleSpace: FlexibleSpaceBar(
               background: widget.item['image_url'] != null
                   ? Image.network(widget.item['image_url'], fit: BoxFit.cover)
@@ -286,6 +314,33 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
+
+                  // Resolution Info
+                  if (_isClosed && widget.item['resolved_by'] != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            widget.item['post_type'] == 'LOST' ? "Found by: " : "Claimed by: ",
+                            style: const TextStyle(color: Colors.green, fontSize: 16),
+                          ),
+                          Text(
+                            widget.item['resolved_by'],
+                            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   Text(
                     widget.item['description'] ?? "No description provided.",
                     style: TextStyle(fontSize: 16, color: Colors.grey[800], height: 1.6),
@@ -318,7 +373,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                          Expanded(
                            child: ElevatedButton.icon(
                              onPressed: () => _launchWhatsApp(_revealedContact!['owner_phone']),
-                             icon: const Icon(Icons.chat),
                              label: const Text("WhatsApp"),
                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white),
                            ),
@@ -327,14 +381,13 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                          Expanded(
                            child: ElevatedButton.icon(
                              onPressed: () => _launchEmail(_revealedContact!['owner_email']),
-                             icon: const Icon(Icons.email),
                              label: const Text("Email"),
                              style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
                            ),
                          ),
                       ],
                     )
-                  ] else if (widget.item['post_type'] == 'FOUND') ...[
+                  ] else if (widget.item['post_type'] == 'FOUND' && !_isOwner) ...[
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -404,12 +457,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                   if (_loadingComments)
                     const Center(child: CircularProgressIndicator())
                   else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _comments.length,
-                      itemBuilder: (context, index) => _buildCommentTile(_comments[index]),
-                    ),
+                    ..._buildCommentTree(),
                 ],
               ),
             ),
@@ -419,37 +467,107 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
     );
   }
 
-  Widget _buildCommentTile(Map<String, dynamic> c) {
-    bool isReply = c['parent_id'] != null;
+  List<Widget> _buildCommentTree() {
+    // Separate top-level comments and replies
+    final topLevel = _comments.where((c) => c['parent_id'] == null).toList();
+    final repliesMap = <int, List<Map<String, dynamic>>>{};
+    
+    for (var comment in _comments.where((c) => c['parent_id'] != null)) {
+      final parentId = comment['parent_id'] as int;
+      repliesMap.putIfAbsent(parentId, () => []).add(comment);
+    }
+    
+    // Build widgets recursively
+    final widgets = <Widget>[];
+    for (var comment in topLevel) {
+      widgets.addAll(_buildCommentWithReplies(comment, repliesMap, 0));
+    }
+    return widgets;
+  }
+
+  List<Widget> _buildCommentWithReplies(
+    Map<String, dynamic> comment,
+    Map<int, List<Map<String, dynamic>>> repliesMap,
+    int depth,
+  ) {
+    final widgets = <Widget>[
+      _buildCommentTile(comment, depth),
+    ];
+    
+    final commentId = comment['comment_id'] as int;
+    final replies = repliesMap[commentId] ?? [];
+    
+    for (var reply in replies) {
+      widgets.addAll(_buildCommentWithReplies(reply, repliesMap, depth + 1));
+    }
+    
+    return widgets;
+  }
+
+  Widget _buildCommentTile(Map<String, dynamic> c, int depth) {
     return Container(
-      margin: EdgeInsets.only(left: isReply ? 30 : 0, bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isReply ? Colors.grey[50] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
+      margin: EdgeInsets.only(left: depth * 20.0, bottom: 10),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(c['users']?['name'] ?? "User", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              if (!isReply) // Only allow replying to top-level comments to avoid deep nesting complexity for now
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _replyingToId = c['comment_id'];
-                      _replyingToName = c['users']?['name'];
-                    });
-                  },
-                  child: const Text("Reply", style: TextStyle(color: Color(0xFFD5316B), fontSize: 12, fontWeight: FontWeight.bold)),
+          // Vertical line indicator for depth > 0
+          if (depth > 0)
+            Container(
+              width: 2,
+              height: 60,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFD5316B).withOpacity(0.3),
+                    Colors.transparent,
+                  ],
                 ),
-            ],
+              ),
+            ),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: depth > 0 ? Colors.grey[50] : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(c['users']?['name'] ?? "User", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text(
+                            _formatDate(c['created_at']),
+                            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _replyingToId = c['comment_id'];
+                            _replyingToName = c['users']?['name'];
+                          });
+                        },
+                        child: const Text("Reply", style: TextStyle(color: Color(0xFFD5316B), fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(c['content'] ?? ""),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(c['content'] ?? ""),
         ],
       ),
     );
