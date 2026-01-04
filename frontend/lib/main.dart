@@ -38,16 +38,16 @@ class _AmritaRetrieverAppState extends State<AmritaRetrieverApp> {
 
   void _setupRealtimeSubscription() {
     supabase
-        .channel('public:Lost_items')
+        .channel('public:posts')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
-          table: 'Lost_items',
+          table: 'posts',
           callback: (payload) {
             final newItem = payload.newRecord;
-            final message = newItem['location_lost'] != null 
-                ? "New item lost at ${newItem['location_lost']}"
-                : "New item lost!";
+            final message = newItem['post_type'] == 'LOST' 
+                ? "New item lost reported: ${newItem['item_name']}"
+                : "New item found: ${newItem['item_name']}";
             
             scaffoldMessengerKey.currentState?.showSnackBar(
               SnackBar(
@@ -57,8 +57,7 @@ class _AmritaRetrieverAppState extends State<AmritaRetrieverApp> {
                 action: SnackBarAction(
                   label: 'VIEW',
                   onPressed: () {
-                    // Navigate to details if needed, 
-                    // for now just close
+                    // Navigate to details if needed
                   },
                 ),
               ),
@@ -75,7 +74,38 @@ class _AmritaRetrieverAppState extends State<AmritaRetrieverApp> {
       debugShowCheckedModeBanner: false,
       title: 'Amrita Retriever',
       theme: ThemeData(
-        primarySwatch: Colors.pink,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFD5316B),
+          primary: const Color(0xFFD5316B),
+          secondary: const Color(0xFFB01E50),
+          surface: const Color(0xFFFFF0F5), // Light pink tint for fun
+        ),
+        scaffoldBackgroundColor: Colors.grey[50], 
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Color(0xFFD5316B),
+          foregroundColor: Colors.white,
+          titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+        ),
+
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFD5316B),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFD5316B), width: 2)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
         fontFamily: 'Roboto',
       ),
       home: const WelcomeScreen(),

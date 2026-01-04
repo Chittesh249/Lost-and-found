@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:amrita_retriever/services/postsdb.dart';
 
 class AddFoundItemPage extends StatefulWidget {
-  const AddFoundItemPage({super.key});
+  final int userId;
+  const AddFoundItemPage({super.key, required this.userId});
 
   @override
   State<AddFoundItemPage> createState() => _AddFoundItemPageState();
@@ -23,25 +25,12 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
 
   bool _isLoading = false;
   XFile? _selectedImage;
+  final _postsDb = PostsDbClient();
 
   @override
   void initState() {
     super.initState();
-    _prefillContactInfo();
-  }
-
-  void _prefillContactInfo() {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null) {
-      // Try to get phone from auth object or metadata
-      String? phone = user.phone;
-      if (phone == null || phone.isEmpty) {
-        phone = user.userMetadata?['phone'] ?? user.userMetadata?['phone_number'];
-      }
-      if (phone != null && phone.isNotEmpty) {
-        _contactController.text = phone;
-      }
-    }
+    // _prefillContactInfo(); // No longer needed if we rely on DB user info
   }
 
   // Image Picker
@@ -56,12 +45,12 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
   }
 
   // Upload Image
-  Future<String?> _uploadImage(String userId) async {
+  Future<String?> _uploadImage(String userIdStr) async {
     if (_selectedImage == null) return null;
 
     final fileExt = _selectedImage!.name.split('.').last;
-    final fileName = '${DateTime.now().toIso8601String()}_$userId.$fileExt';
-    final filePath = 'found_items/$fileName';
+    final fileName = '${DateTime.now().toIso8601String()}_$userIdStr.$fileExt';
+    final filePath = 'posts/$fileName'; // Store in posts folder
 
     try {
       final bytes = await _selectedImage!.readAsBytes();
@@ -80,9 +69,6 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
       return imageUrl;
     } catch (e) {
       debugPrint('Image upload error: $e');
-      // Continue without image or handle error?
-      // For now, let's treat image upload failure as non-blocking but warn?
-      // Or throw exception to stop submission.
       throw Exception('Failed to upload image: $e');
     }
   }
@@ -93,25 +79,22 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
     setState(() => _isLoading = true);
 
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) throw Exception("User not logged in");
-
+      // Upload Image logic
       String? uploadedImageUrl;
       if (_selectedImage != null) {
-        uploadedImageUrl = await _uploadImage(user.id);
+        uploadedImageUrl = await _uploadImage(widget.userId.toString());
       }
+      
+      final fullDescription = "${_descriptionController.text}\n\nLocation: ${_locationController.text}\nDate: ${_dateController.text}";
 
-      await Supabase.instance.client.from('Found_items').insert({
+      await _postsDb.createPost({
+        'post_type': 'FOUND',
         'item_name': _nameController.text,
-        'description': _descriptionController.text,
-        'location_found': _locationController.text,
-        'date_found': _dateController.text, 
+        'description': fullDescription,
         'image_url': uploadedImageUrl,
-        'contact_info': _contactController.text,
         'security_question': _securityQuestionController.text,
         'security_answer': _securityAnswerController.text,
-        'reported_by': user.id,
-      });
+      }, widget.userId);
 
       if (!mounted) return;
       Navigator.pop(context);
@@ -154,6 +137,7 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
                 controller: _descriptionController,
                 decoration: const InputDecoration(labelText: "Description"),
                 maxLines: 3,
+                validator: (v) => v!.isEmpty ? "Required" : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -209,7 +193,7 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
               TextFormField(
                 controller: _contactController,
                 decoration: const InputDecoration(labelText: "Contact Info (Phone/Email)"),
-                validator: (v) => v!.isEmpty ? "Required" : null,
+                // validator: (v) => v!.isEmpty ? "Required" : null, // Not required as we rely on DB
               ),
               const SizedBox(height: 24),
               
@@ -232,6 +216,13 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) => v!.isEmpty ? "Required" : null,
+              ),
+              
+              // Helper text about contact info
+              const SizedBox(height: 16),
+              const Text(
+                "Note: Your registered phone/email will be revealed to the claimant upon correct answer.",
+                style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
               ),
 
               const SizedBox(height: 24),

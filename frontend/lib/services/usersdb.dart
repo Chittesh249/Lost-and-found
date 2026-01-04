@@ -1,96 +1,98 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart'; 
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
-/// Thin client for the users database endpoints.
 class UsersDbClient {
-  /// Base URL of the backend server, e.g. http://localhost:3000/api/user
-  final String baseUrl;
+  final SupabaseClient supabase;
 
-  /// HTTP client used for requests. Can be overridden for testing.
-  final http.Client httpClient;
+  UsersDbClient({SupabaseClient? supabase})
+      : supabase = supabase ?? Supabase.instance.client;
 
-  UsersDbClient({
-    String? baseUrl,
-    http.Client? httpClient,
-  })  : baseUrl = baseUrl ?? _defaultBaseUrl(),
-        httpClient = httpClient ?? http.Client();
+  /// Hashes the password using SHA-256
+  String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
 
-  /// Registers a user by email and password.
-  ///
-  /// Mirrors backend/db/usersdb.js POST /register.
-  Future<RegisterResponse> registerUser({
+  /// Registers a new user directly into the `users` table.
+  Future<Map<String, dynamic>> getUser(int userId) async {
+    try {
+      final response = await supabase
+          .from('users')
+          .select()
+          .eq('user_id', userId)
+          .single();
+      return response;
+    } catch (e) {
+      throw UsersDbException(message: 'Failed to fetch user: $e');
+    }
+  }
+
+  Future<void> registerUser({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
+    try {
+      final hashedPassword = _hashPassword(password);
+      
+      await supabase.from('users').insert({
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'password_hash': hashedPassword,
+      });
+      
+    } catch (e) {
+      // Check for unique key violation (email)
+      if (e.toString().contains('users_email_key')) {
+         throw UsersDbException(message: 'Email already registered.');
+      }
+      throw UsersDbException(message: 'Registration failed: $e');
+    }
+  }
+
+  /// Logs in a user by verifying credentials against `users` table.
+  /// Returns the user data (Map) if successful.
+  Future<Map<String, dynamic>> loginUser({
     required String email,
     required String password,
   }) async {
-    final Uri uri = Uri.parse('$baseUrl/api/user/signup');
-    http.Response response;
     try {
-      response = await httpClient
-          .post(
-            uri,
-            headers: <String, String>{'Content-Type': 'application/json'},
-            body: jsonEncode(<String, String>{
-              'email': email,
-              'password': password,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
-    } on Object {
-      throw UsersDbException(message: 'Network error. Please try again.');
-    }
+      final response = await supabase
+          .from('users')
+          .select()
+          .eq('email', email)
+          .maybeSingle();
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final Map<String, dynamic> data = _decodeJson(response.body);
-      return RegisterResponse(
-        message: (data['message'] as String?) ?? 'OK',
-      );
-    }
-
-    // Attempt to parse error message from backend
-    String message = 'Registration failed';
-    try {
-      final Map<String, dynamic> data = _decodeJson(response.body);
-      final String? backendError = (data['error'] as String?);
-      if (backendError != null && backendError.isNotEmpty) {
-        message = backendError;
+      if (response == null) {
+        throw UsersDbException(message: 'User not found.');
       }
-    } catch (_) {
-      // ignore parse errors and fall back to default message
+
+      final storedHash = response['password_hash'] as String;
+      final inputHash = _hashPassword(password);
+
+      if (storedHash != inputHash) {
+        throw UsersDbException(message: 'Invalid password.');
+      }
+
+      return response; // Contains user_id, email, phone, etc.
+    } catch (e) {
+      if (e is UsersDbException) rethrow;
+      throw UsersDbException(message: 'Login failed: $e');
     }
-
-    throw UsersDbException(message: message, statusCode: response.statusCode);
-  }
-
-  Map<String, dynamic> _decodeJson(String source) {
-    final dynamic decoded = jsonDecode(source);
-    if (decoded is Map<String, dynamic>) return decoded;
-    throw const FormatException('Unexpected response format');
   }
 }
 
-String _defaultBaseUrl() {
-  // For web builds we can use relative path, for mobile/desktop use localhost by default
-  // Update to point to the Admin Frontend deployment usually on port 3000 or the hosted URL
-  return dotenv.env['NEXT_PUBLIC_SUPABASE_URL'] ?? 'http://localhost:3000/api/user';
-}
 
-class RegisterResponse {
-  final String message;
-
-  RegisterResponse({required this.message});
-}
 
 class UsersDbException implements Exception {
   final String message;
-  final int? statusCode;
 
-  UsersDbException({required this.message, this.statusCode});
+  UsersDbException({required this.message});
 
   @override
-  String toString() =>
-      'UsersDbException(statusCode: ${statusCode?.toString() ?? 'n/a'}, message: $message)';
+  String toString() => message;
 }
-
-

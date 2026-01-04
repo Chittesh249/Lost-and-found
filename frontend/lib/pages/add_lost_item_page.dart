@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-// import 'dart:io'; // For mobile file handling if needed, but Supabase upload often takes byte data or file path
-// NOTE: For web compatibility, we might need Uint8List. For IO, File. 
-// Supabase Flutter `upload` method supports `File`. `uploadBinary` supports `Uint8List`.
-// Since we might be on web or mobile, let's try to handle both or generic XFile.
+import 'package:amrita_retriever/services/postsdb.dart';
 
 class AddLostItemPage extends StatefulWidget {
-  const AddLostItemPage({super.key});
+  final int userId;
+  const AddLostItemPage({super.key, required this.userId});
 
   @override
   State<AddLostItemPage> createState() => _AddLostItemPageState();
@@ -17,12 +15,22 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _locationController = TextEditingController();
+  final _locationController = TextEditingController(); // We'll append this to description or separate if schema supported? Schema only has description. I'll append to description.
   final _dateController = TextEditingController();
-  // final _imageUrlController = TextEditingController(); // REMOVED
+  
+  // Security Question is technically for FOUND items, but maybe lost items want it too? 
+  // The prompt says: "if the user clicks on a 'found item' post, he should answer a security qn... to reveal... person who found it"
+  // So Lost items don't necessarily need a security question to contact the owner? Usually contact info is public for lost items? 
+  // But the schema has security_question locally in `posts` table.
+  // I will leave security question Optional or Empty for Lost items if not required. 
+  // However, `posts` table has `security_question` column.
+  // For LOST items, usually you want people to contact YOU freely.
+  // The requirement specifically mentions "found item" post logic.
+  // I'll skip security question for LOST items for now, or start with null.
 
   bool _isLoading = false;
   XFile? _selectedImage;
+  final _postsDb = PostsDbClient();
 
   // Image Picker
   Future<void> _pickImage(ImageSource source) async {
@@ -36,12 +44,12 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
   }
 
   // Upload Image to Supabase Storage
-  Future<String?> _uploadImage(String userId) async {
+  Future<String?> _uploadImage(String userIdStr) async {
     if (_selectedImage == null) return null;
 
     final fileExt = _selectedImage!.name.split('.').last;
-    final fileName = '${DateTime.now().toIso8601String()}_$userId.$fileExt';
-    final filePath = 'lost_items/$fileName';
+    final fileName = '${DateTime.now().toIso8601String()}_$userIdStr.$fileExt';
+    final filePath = 'posts/$fileName'; // Changed folder to posts
 
     try {
       final bytes = await _selectedImage!.readAsBytes();
@@ -50,7 +58,7 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
           .uploadBinary(
             filePath,
             bytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'), // Adjust based on fileExt if needed
+            fileOptions: const FileOptions(contentType: 'image/jpeg'), 
           );
       
       final imageUrl = Supabase.instance.client.storage
@@ -70,24 +78,24 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
     setState(() => _isLoading = true);
 
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) throw Exception("User not logged in");
-
       // Upload Image first
       String? uploadedImageUrl;
       if (_selectedImage != null) {
-         uploadedImageUrl = await _uploadImage(user.id);
+         uploadedImageUrl = await _uploadImage(widget.userId.toString());
       }
+      
+      // Combine location and date into description since schema doesn't have specific columns for them
+      // Schema: post_id, user_id, post_type, item_name, description, image_url, status, created_at, security_question, security_answer
+      final fullDescription = "${_descriptionController.text}\n\nLocation: ${_locationController.text}\nDate: ${_dateController.text}";
 
-      await Supabase.instance.client.from('Lost_items').insert({
+      await _postsDb.createPost({
+        'post_type': 'LOST',
         'item_name': _nameController.text,
-        'description': _descriptionController.text,
-        'location_lost': _locationController.text,
-        'date_lost': _dateController.text,
+        'description': fullDescription,
         'image_url': uploadedImageUrl,
-        'reported_by': user.id,
-        'reported_by_name': user.userMetadata?['full_name'] ?? 'User',
-      });
+        'security_question': null, // No security question for Lost items (or optional)
+        'security_answer': null,
+      }, widget.userId);
 
       if (!mounted) return;
       Navigator.pop(context);
@@ -130,6 +138,7 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
                 controller: _descriptionController,
                 decoration: const InputDecoration(labelText: "Description"),
                 maxLines: 3,
+                validator: (v) => v!.isEmpty ? "Required" : null,
               ),
               const SizedBox(height: 12),
               TextFormField(

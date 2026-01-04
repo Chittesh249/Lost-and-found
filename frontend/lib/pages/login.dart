@@ -1,15 +1,13 @@
 import 'package:amrita_retriever/pages/home_page.dart';
-import 'package:amrita_retriever/pages/lost_items_screen.dart';
+import 'package:amrita_retriever/services/usersdb.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
-const String authSupabaseUrl = "https://etdewmgrpvoavevlpibg.supabase.co";
 
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
@@ -17,6 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   
   bool _loading = false;
   String? _error;
+  final _usersDb = UsersDbClient();
 
   Future<void> _login() async {
     setState(() {
@@ -25,36 +24,30 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final supabase = SupabaseClient(
-        authSupabaseUrl,
-        dotenv.env['SUPABASE_ANON_KEY']!,
-      );
-
-      final response = await supabase.auth.signInWithPassword(
+      final user = await _usersDb.loginUser(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      if (response.user != null) {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-      } else {
-        setState(() {
-          _error = "Invalid email or password";
-        });
-      }
+      if (!mounted) return;
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage(userId: user['user_id'])),
+      );
+
     } catch (e) {
+      // Handles both UsersDbException and other errors
       setState(() {
         _error = e.toString();
       });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
-
-    setState(() {
-      _loading = false;
-    });
   }
 
 
@@ -63,7 +56,6 @@ class _LoginPageState extends State<LoginPage> {
     const Color primaryColor = Color(0xFFD5316B);
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,
@@ -92,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
                 labelText: 'Email',
                 labelStyle: const TextStyle(color: primaryColor),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderSide: const BorderSide(color: primaryColor, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 border: OutlineInputBorder(
@@ -109,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
                 labelText: 'Password',
                 labelStyle: const TextStyle(color: primaryColor),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderSide: const BorderSide(color: primaryColor, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 border: OutlineInputBorder(

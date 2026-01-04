@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:amrita_retriever/services/usersdb.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -10,13 +9,14 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  final supabase = Supabase.instance.client;
+  final _usersDb = UsersDbClient();
 
   bool _loading = false;
   String? _error;
@@ -27,15 +27,16 @@ class _SignupPageState extends State<SignupPage> {
       _error = null;
     });
 
+    final String name = _nameController.text.trim();
     final String email = _emailController.text.trim();
     final String phone = _phoneController.text.trim();
     final String password = _passwordController.text;
     final String confirm = _confirmPasswordController.text;
 
-    if (email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || password.isEmpty || phone.isEmpty) {
       setState(() {
         _loading = false;
-        _error = 'Email and password are required';
+        _error = 'All fields are required';
       });
       return;
     }
@@ -49,34 +50,25 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     try {
-      final AuthResponse res = await supabase.auth.signUp(
+      await _usersDb.registerUser(
+        name: name,
         email: email,
+        phone: phone,
         password: password,
-        data: {
-          'phone_number': phone,
-        },
       );
-
-      if (res.user == null) {
-        throw const AuthException('Signup failed. Please try again.');
-      }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Account created successfully. Verify your email.'),
+          content: Text('Account created successfully. Please login.'),
         ),
       );
 
-      Navigator.pop(context);
-    } on AuthException catch (e) {
+      Navigator.pop(context); // Go back to Welcome or Login
+    } catch (e) {
       setState(() {
-        _error = e.message;
-      });
-    } catch (_) {
-      setState(() {
-        _error = 'Unexpected error occurred';
+        _error = e.toString();
       });
     } finally {
       if (mounted) {
@@ -115,6 +107,23 @@ class _SignupPageState extends State<SignupPage> {
               height: 120,
             ),
             const SizedBox(height: 32),
+
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Full Name',
+                labelStyle: const TextStyle(color: primaryColor),
+                focusedBorder: OutlineInputBorder(
+                  borderSide:
+                      const BorderSide(color: primaryColor, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
 
             TextField(
               controller: _emailController,
