@@ -193,7 +193,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                controller: controller, 
                decoration: const InputDecoration(
                  labelText: "Name of person", 
-                 hintText: "e.g. John Doe"
+                 hintText: "e.g. Arun"
                )
             ),
           ],
