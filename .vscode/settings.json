@@ -1,5 +1,5 @@
 {
     "liveServer.settings.port": 5501,
     "cmake.sourceDirectory": "/Users/abhijith/Documents/Lost-and-found-1/frontend/linux",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "automatic"
 }
