@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:amrita_retriever/services/usersdb.dart';
 import 'package:amrita_retriever/services/postsdb.dart';
 import 'package:amrita_retriever/pages/item_details_page.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfilePage extends StatefulWidget {
   final String userId;
@@ -47,6 +49,86 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     } catch (e) {
       debugPrint("Error loading profile: $e");
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _handleProfileImageUpload() async {
+    try {
+      // 1. Show bottom sheet to choose source
+      final ImageSource? source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (ctx) => Container(
+          color: Colors.white,
+          child: SafeArea( // Added SafeArea for better UI on notched devices
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: Color(0xFFD5316B)),
+                  title: const Text('Camera'),
+                  onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: Color(0xFFD5316B)),
+                  title: const Text('Gallery'),
+                  onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      // 2. Pick Image
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source);
+      if (image == null) return;
+
+      setState(() => _loading = true);
+
+      // 3. Upload to Supabase
+      final fileExt = image.name.split('.').last;
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${widget.userId}.$fileExt';
+      final filePath = 'profiles/$fileName'; // Using 'profiles' within the bucket
+
+      await Supabase.instance.client.storage
+          .from('profile-images')
+          .uploadBinary(
+            filePath,
+            await image.readAsBytes(),
+            fileOptions: FileOptions(contentType: 'image/$fileExt', upsert: true),
+          );
+
+      final imageUrl = Supabase.instance.client.storage
+          .from('profile-images')
+          .getPublicUrl(filePath);
+
+      // 4. Update Database
+      await _usersDb.updateProfilePic(widget.userId, imageUrl);
+
+      // 5. Update Local State
+      if (mounted) {
+        setState(() {
+          // Update the specific field in the _user map
+          // We need to ensure _user is mutable or create a new map
+          final newUser = Map<String, dynamic>.from(_user!);
+          newUser['profile_pic'] = imageUrl;
+          _user = newUser;
+          _loading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile picture updated!")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error uploading profile image: $e");
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text("Failed to update profile picture: $e")),
+        );
+      }
     }
   }
 
@@ -97,12 +179,39 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       color: Colors.white,
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: const Color(0xFFD5316B),
-            child: Text(
-              _user?['name']?[0]?.toUpperCase() ?? "U",
-              style: const TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold),
+          Center(
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 50, // Slightly larger
+                  backgroundColor: const Color(0xFFD5316B),
+                  backgroundImage: _user?['profile_pic'] != null 
+                      ? NetworkImage(_user!['profile_pic']) 
+                      : null,
+                  child: _user?['profile_pic'] == null
+                      ? Text(
+                          _user?['name']?[0]?.toUpperCase() ?? "U",
+                          style: const TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold),
+                        )
+                      : null,
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: _handleProfileImageUpload,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                      ),
+                      child: const Icon(Icons.camera_alt, color: Color(0xFFD5316B), size: 20),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 20),

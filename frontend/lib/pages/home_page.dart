@@ -21,6 +21,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   int _selectedIndex = 0;
   final SupabaseClient supabase = Supabase.instance.client;
   RealtimeChannel? _notificationsChannel;
+  String? _profilePicUrl;
 
   @override
   void initState() {
@@ -35,6 +36,27 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     
     _setupNotifications();
     _checkProximity();
+    _loadProfilePic();
+  }
+
+  Future<void> _loadProfilePic() async {
+    try {
+      final res = await supabase
+          .from('users')
+          .select('profile_pic')
+          .eq('user_id', widget.userId)
+          .single();
+
+      final pic = res['profile_pic'] as String?;
+      if (pic != null && pic.isNotEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _profilePicUrl = pic;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load profile pic: $e');
+    }
   }
 
   Future<void> _checkProximity() async {
@@ -114,7 +136,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               onPressed: () {
                  Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(userId: widget.userId)));
               }, 
-              icon: Icon(Icons.account_circle, color: primaryColor, size: 30)
+              icon: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.transparent,
+                backgroundImage: _profilePicUrl != null ? NetworkImage(_profilePicUrl!) : null,
+                child: _profilePicUrl == null ? Icon(Icons.account_circle, color: primaryColor, size: 30) : null,
+              ),
             )
          ],
       ),

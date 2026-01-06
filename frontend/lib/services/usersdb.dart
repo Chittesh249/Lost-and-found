@@ -94,4 +94,14 @@ class UsersDbClient {
       throw UsersDbException(message: 'Login failed: $e');
     }
   }
+
+  Future<void> updateProfilePic(String userId, String imageUrl) async {
+    try {
+      await supabase.from('users').update({
+        'profile_pic': imageUrl
+      }).eq('user_id', userId);
+    } catch (e) {
+      throw UsersDbException(message: 'Failed to update profile picture: $e');
+    }
+  }
 }
