@@ -270,6 +270,9 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final posterName = (widget.item['user_id'] == widget.currentUserId)
+        ? 'You'
+        : (widget.item['users']?['name'] ?? 'Unknown');
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -382,7 +385,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                         const SizedBox(width: 16),
                         const Icon(Icons.person_outline, size: 20, color: Colors.grey),
                         const SizedBox(width: 8),
-                        Text("By: ${widget.item['users']?['name'] ?? 'Unknown'}", style: const TextStyle(color: Colors.grey)),
+                        Text("By: $posterName", style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                   ),
