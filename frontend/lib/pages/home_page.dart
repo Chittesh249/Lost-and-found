@@ -59,15 +59,36 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
-  Future<void> _checkProximity() async {
-    await LocationService().init();
+  Future<void> _checkProximity({bool manual = false}) async {
     try {
+      if (manual) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text("Checking for nearby items..."), duration: Duration(milliseconds: 1000),)
+        );
+      }
+      
+      await LocationService().init();
       final posts = await PostsDbClient().getPosts('LOST');
+      
       if (mounted) {
          await LocationService().checkProximityAndNotify(posts);
+         if (manual) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text("Location check complete. If any items are nearby, you will be notified."), backgroundColor: Colors.green,)
+           );
+         }
       }
     } catch (e) {
       debugPrint("Proximity check failed: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Location Error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          )
+        );
+      }
     }
   }
   
@@ -134,6 +155,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           actions: [
             IconButton(
               onPressed: () {
+                 _checkProximity(manual: true);
+              },
+              icon: Icon(Icons.my_location_rounded, color: primaryColor, size: 28),
+              tooltip: "Check for nearby items",
+            ),
+            IconButton(
+              onPressed: () {
                  Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(userId: widget.userId)));
               }, 
               icon: CircleAvatar(
@@ -143,7 +171,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 child: _profilePicUrl == null ? Icon(Icons.account_circle, color: primaryColor, size: 30) : null,
               ),
             )
-         ],
+          ],
       ),
       body: Column(
         children: [

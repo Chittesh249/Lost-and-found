@@ -29,9 +29,10 @@ export async function GET() {
   const adminSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
   const { data, error } = await adminSupabase
-    .from('Lost_items') // Ensure correct table name case
+    .from('posts')
     .select('*')
-    .order('created_post', { ascending: false })
+    .eq('post_type', 'lost')
+    .order('created_at', { ascending: false })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
